@@ -48,6 +48,19 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             _diagnosticServices = serviceProvider.GetRequiredService<IDiagnosticServices>();
         }
 
+        [HttpGet("memory")]
+        public Task<ActionResult<long>> Memory()
+        {
+
+            return this.InvokeService(async () =>
+            {
+                long result = await MemoryService.GetAllocatableSize(HttpContext.RequestAborted);
+
+                return new ActionResult<long>(result);
+            }, _logger);
+
+        }
+
         [HttpGet("processes")]
         public Task<ActionResult<IEnumerable<ProcessIdentifierModel>>> GetProcesses()
         {
