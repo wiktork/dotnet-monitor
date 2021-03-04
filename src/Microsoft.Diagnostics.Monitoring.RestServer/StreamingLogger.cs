@@ -45,6 +45,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         private readonly string _categoryName;
         private readonly LogFormat _logFormat;
         private readonly LogLevel _logLevel;
+        private bool _firstMessage;
 
         public StreamingLogger(string category, Stream outputStream, LogFormat format, LogLevel logLevel)
         {
@@ -64,6 +65,22 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         }
 
         public bool IsEnabled(LogLevel logLevel) => logLevel <= _logLevel;
+
+        public void LogBeginMessage()
+        {
+            if (!_firstMessage)
+            {
+                return;
+            }
+            _firstMessage = false;
+
+            string beginMessage = $"Begin log {0}";
+
+            if (_logFormat == LogFormat.EventStream)
+            {
+                
+            }
+        }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
