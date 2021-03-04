@@ -9,6 +9,11 @@
     <Description>.NET Core Diagnostic Monitoring Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <IsShipping>false</IsShipping>
+    <RestoreSources>
+      C:\dd\Github\wiktork\dotnet\diagnostics\artifacts\packages\Debug\NonShipping
+    </RestoreSources>
+    <RestoreNoCache>true</RestoreNoCache>
+    <RestoreForce>true</RestoreForce>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <RollForward>Major</RollForward>
     <!-- This forces the creation of a checksum file and uploads it to blob storage

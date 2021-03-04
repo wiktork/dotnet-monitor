@@ -16,6 +16,9 @@
     <!-- Version information -->
     <VersionPrefix>5.0.0</VersionPrefix>
     <LangVersion>preview</LangVersion>
+    <RestoreSources>
+      C:\dd\Github\wiktork\dotnet\diagnostics\artifacts\packages\Debug\NonShipping
+    </RestoreSources>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,4 +37,7 @@
     <InternalsVisibleTo Include="dotnet-monitor" />
   </ItemGroup>
 
+  <Target BeforeTargets="Build">
+    <Message Importance="high" Text="!!! $(RestorePackagesPath)" />
+  </Target>
 </Project>
