@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <DailyDevVersion>$(VersionPrefix)-dev.*</DailyDevVersion>
+    <MicrosoftDiagnosticsMonitoringVersion>$(DailyDevVersion)</MicrosoftDiagnosticsMonitoringVersion>
+    <MicrosoftDiagnosticsMonitoringEventPipeVersion>$(DailyDevVersion)</MicrosoftDiagnosticsMonitoringEventPipeVersion>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <RestoreSources>
+        $(DIAGNOSTICS_REPO_ROOT)\artifacts\packages\Debug\NonShipping;
+        $(DIAGNOSTICS_REPO_ROOT)\artifacts\packages\Debug\Shipping
+    </RestoreSources>
+  </PropertyGroup>
+</Project>

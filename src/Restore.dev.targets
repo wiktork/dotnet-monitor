@@ -1,0 +1,7 @@
+<Project>
+  <Target Name="CleanDependentPackages" BeforeTargets="_IsProjectRestoreSupported">
+    <Message Importance="high" Text="!!! test" />
+    <Message Importance="high" Text="!+!@(PackageReference)" />
+    <RemoveDir Directories="$(NUGET_PACKAGES)\microsoft.diagnostics.monitoring.eventpipe" ContinueOnError="false" />
+  </Target>
+</Project>

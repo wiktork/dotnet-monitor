@@ -9,9 +9,6 @@
     <Description>.NET Core Diagnostic Monitoring Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <IsShipping>false</IsShipping>
-    <RestoreSources>
-      C:\dd\Github\wiktork\dotnet\diagnostics\artifacts\packages\Debug\NonShipping
-    </RestoreSources>
     <RestoreNoCache>true</RestoreNoCache>
     <RestoreForce>true</RestoreForce>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
@@ -25,6 +22,8 @@
     <PreReleaseVersionIteration>4</PreReleaseVersionIteration>
   </PropertyGroup>
 
+    <Import Project="..\..\Restore.dev.props" Condition="'$(DIAGNOSTICS_REPO_ROOT)' != ''"/>    
+    
   <ItemGroup>
     <None Remove="appsettings.Development.json" />
     <None Remove="appsettings.json" />
@@ -56,4 +55,5 @@
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.RestServer\Microsoft.Diagnostics.Monitoring.RestServer.csproj" />
   </ItemGroup>
 
+    <Import Project="..\..\Restore.dev.targets" Condition="'$(DIAGNOSTICS_REPO_ROOT)' != ''"/>
 </Project>
