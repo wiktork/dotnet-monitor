@@ -37,7 +37,7 @@
     <InternalsVisibleTo Include="dotnet-monitor" />
   </ItemGroup>
 
-  <Target BeforeTargets="Build">
-    <Message Importance="high" Text="!!! $(RestorePackagesPath)" />
+  <Target Name="CleanDependentPackages" BeforeTargets="_GetAllRestoreProjectPathItems">
+    <RemoveDir Directories="C:\Users\wiktork.REDMOND\.nuget\packages\microsoft.diagnostics.monitoring.eventpipe"  ContinueOnError="false"/>
   </Target>
 </Project>
