@@ -1,0 +1,9 @@
+<Project>
+  <Target Name="CleanDependentPackages" BeforeTargets="_IsProjectRestoreSupported">
+
+      <ItemGroup>
+          <DevPackageReferences Include="%(PackageReference.Identity)" Condition="%(PackageReference.IsDevPackage) == 'true'"/>
+      </ItemGroup> 
+    <RemoveDir Directories="$(NUGET_PACKAGES)\%(DevPackageReferences.Identity)" ContinueOnError="false" />
+  </Target>
+</Project>

@@ -15,6 +15,8 @@
     <BlobGroupPrefix>monitor</BlobGroupPrefix>
   </PropertyGroup>
 
+    <Import Project="..\..\Restore.dev.props" Condition="'$(DIAGNOSTICS_REPO_ROOT)' != ''"/>
+
   <ItemGroup>
     <None Remove="appsettings.Development.json" />
     <None Remove="appsettings.json" />
@@ -26,7 +28,9 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(MicrosoftExtensionsLoggingConsoleVersion)" />
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="$(MicrosoftAspNetCoreAuthenticationNegotiateVersion)" />
-    <PackageReference Include="Microsoft.Diagnostics.Monitoring" Version="$(MicrosoftDiagnosticsMonitoringVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Monitoring" Version="$(MicrosoftDiagnosticsMonitoringVersion)" >
+      <IsDevPackage>true</IsDevPackage> 
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -50,4 +54,5 @@
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.OpenApiGen" />
   </ItemGroup>
 
+  <Import Project="..\..\Restore.dev.targets" Condition="'$(DIAGNOSTICS_REPO_ROOT)' != ''"/>
 </Project>

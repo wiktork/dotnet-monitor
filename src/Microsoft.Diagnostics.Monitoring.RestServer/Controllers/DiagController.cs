@@ -341,7 +341,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             [FromQuery][Range(-1, int.MaxValue)]
             int durationSeconds = 30,
             [FromQuery]
-            LogLevel level = LogLevel.Debug,
+            LogLevel level = LogLevel.Warning,
             [FromQuery]
             string egressProvider = null)
         {
@@ -364,11 +364,19 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                     loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream, format, level));
 
-                    var settings = new EventLogsPipelineSettings
+                    var settings = new EventLogsPipelineSettings()
                     {
-                        Duration = duration,
-                        LogLevel = level,
+                        Duration = duration
                     };
+
+                    if (processInfo.EndpointInfo.RuntimeInstanceCookie != Guid.Empty)
+                    {
+                        settings.UseAppFilters = true;
+                    }
+                    else
+                    {
+                        settings.LogLevel = level;
+                    }
 
                     var client = new DiagnosticsClient(processInfo.EndpointInfo.Endpoint);
 

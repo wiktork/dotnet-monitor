@@ -13,8 +13,13 @@
     <OutputType>Library</OutputType>
   </PropertyGroup>
 
+    <Import Project="../Restore.dev.props" Condition="'$(DIAGNOSTICS_REPO_ROOT)' != ''"/>
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.Diagnostics.Monitoring.EventPipe" Version="$(MicrosoftDiagnosticsMonitoringEventPipeVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Monitoring.EventPipe" Version="$(MicrosoftDiagnosticsMonitoringEventPipeVersion)">
+      <IsDevPackage>true</IsDevPackage>
+    </PackageReference>
+
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
@@ -37,4 +42,5 @@
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.OpenApiGen" />
   </ItemGroup>
 
+  <Import Project="../Restore.dev.targets" Condition="'$(DIAGNOSTICS_REPO_ROOT)' != ''"/>
 </Project>

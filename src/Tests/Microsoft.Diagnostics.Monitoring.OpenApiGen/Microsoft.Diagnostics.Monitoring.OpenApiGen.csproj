@@ -5,6 +5,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+    <Import Project="..\..\Restore.dev.props" Condition="'$(DIAGNOSTICS_REPO_ROOT)' != ''"/>
   <ItemGroup>
     <ProjectReference Include="..\..\Tools\dotnet-monitor\dotnet-monitor.csproj" />
   </ItemGroup>
