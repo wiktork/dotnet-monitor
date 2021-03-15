@@ -116,5 +116,15 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
             Assert.Equal(HttpStatusCode.BadRequest, validationProblemDetailsException.StatusCode);
             Assert.Equal(StatusCodes.Status400BadRequest, validationProblemDetailsException.Details.Status);
         }
+
+        [Fact]
+        public async Task TestRequestLimits()
+        {
+            await using DotNetMonitorRunner toolRunner = new DotNetMonitorRunner(_outputHelper);
+
+            await toolRunner.StartAsync(DefaultStartTimeout);
+
+
+        }
     }
 }
