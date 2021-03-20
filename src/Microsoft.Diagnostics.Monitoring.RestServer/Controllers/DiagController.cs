@@ -285,6 +285,43 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             }, processKey, ArtifactType_Trace);
         }
 
+        [HttpGet("traceProto")]
+        public Task<ActionResult> CaptureRollingTrace(ProcessKey? processKey)
+        {
+            return InvokeForProcess(async (processInfo) =>
+            {
+                var providers = new[] { new EventPipeProvider("Microsoft-Windows-DotNETRuntime", System.Diagnostics.Tracing.EventLevel.Verbose, keywords: 32769 | 0x10, arguments: null) };
+
+                EventPipeProviderSourceConfiguration config = new EventPipeProviderSourceConfiguration(false, 256, providers);
+
+
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "TempLogs");
+                if (!Directory.Exists(folder))
+                {
+                    Directory.CreateDirectory(folder);
+                }
+
+                using var file = System.IO.File.OpenWrite(Path.Combine(folder, "test.nettrace"));
+
+                Func<Stream, CancellationToken, Task> streamAvailable = async (Stream eventStream, CancellationToken token) =>
+                {
+                    await eventStream.CopyToAsync(file, 0x10000, token);
+                };
+
+                var client = new DiagnosticsClient(processInfo.EndpointInfo.Endpoint);
+
+                await using EventTracePipeline pipeProcessor = new EventTracePipeline(client, new EventTracePipelineSettings
+                {
+                    Configuration = config,
+                    Duration = TimeSpan.FromSeconds(15),
+                }, streamAvailable);
+
+                await pipeProcessor.RunAsync(this.Request.HttpContext.RequestAborted);
+
+                return Ok();
+
+            }, processKey, string.Empty);
+        }
         /// <summary>
         /// Capture a trace of a process.
         /// </summary>
