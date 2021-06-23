@@ -239,6 +239,9 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Success"
           }
         }
       }
@@ -314,6 +317,9 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Success"
           }
         }
       }
@@ -423,6 +429,9 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Success"
           }
         }
       },
@@ -530,6 +539,9 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Success"
           }
         }
       }
@@ -635,6 +647,9 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Success"
           }
         }
       },
@@ -750,6 +765,9 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Success"
           }
         }
       }
@@ -774,6 +792,67 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/operation/{operationId}": {
+      "get": {
+        "tags": [
+          "Operation"
+        ],
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationStatus"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Operation"
+        ],
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
           }
         }
       }
@@ -985,6 +1064,54 @@
           }
         },
         "additionalProperties": false
+      },
+      "OperationState": {
+        "enum": [
+          "Running",
+          "Succeeded",
+          "Failed",
+          "Cancelled"
+        ],
+        "type": "string"
+      },
+      "OperationError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "OperationStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OperationState"
+          },
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdDateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resourceLocation": {
+            "type": "string",
+            "nullable": true
+          },
+          "error": {
+            "$ref": "#/components/schemas/OperationError"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the state of a long running operation. Used for all types of results, including\r\nsuccesses and failures."
       }
     },
     "responses": {
