@@ -24,6 +24,8 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers;
 
 namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
 {
@@ -98,6 +100,42 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                 _logger.WrittenToHttpStream();
                 return new ActionResult<IEnumerable<Models.ProcessIdentifier>>(processesIdentifiers);
             }, _logger);
+        }
+
+        [HttpGet("trigger", Name = nameof(Trigger))]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        public Task<ActionResult<object>> Trigger(
+            [FromQuery]
+            int? pid = null,
+            [FromQuery]
+            Guid? uid = null,
+            [FromQuery]
+            string name = null,
+            [FromQuery]
+            int durationSeconds = -1)
+        {
+            ProcessKey? processKey = GetProcessKey(pid, uid, name);
+
+            return InvokeForProcess(async (processInfo) =>
+            {
+                var settings = new EventPipeTriggerPipelineSettings<AspnetTriggerSettings>()
+                {
+                    Configuration = new HttpRequestSourceConfiguration(),
+                    TriggerFactory = new AspnetTriggerProtoFactory(),
+                    Duration = TimeSpan.FromSeconds(durationSeconds),
+                };
+
+                await using EventPipeTriggerPipeline<AspnetTriggerSettings> pipeline = new EventPipeTriggerPipeline<AspnetTriggerSettings>(
+                    new DiagnosticsClient(processInfo.EndpointInfo.Endpoint), settings, (e) =>
+                    {
+                        _logger.LogWarning(e.EventName);
+                    });
+
+                await pipeline.RunAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+
+
+                return new ActionResult<object>("test");
+            }, processKey);
         }
 
         /// <summary>
