@@ -15,6 +15,7 @@ using Microsoft.Diagnostics.Monitoring.WebApi;
 using Microsoft.Diagnostics.Monitoring.WebApi.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
@@ -87,7 +88,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             if (metricsOptions.Enabled.GetValueOrDefault(MetricsOptionsDefaults.Enabled))
             {
                 services.AddSingleton<MetricsStoreService>();
-                services.AddHostedService<MetricsService>();
+                services.AddSingleton<MetricsServiceReduced>();
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IEndpointInfoSourceCallbacks, CollectionRules.MetricsCallbacks>());
+                
+
+                //services.AddHostedService<MetricsService>();
             }
 
             services.AddSingleton<IMetricsPortsProvider, MetricsPortsProvider>();

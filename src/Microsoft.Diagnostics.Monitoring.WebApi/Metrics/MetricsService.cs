@@ -14,6 +14,47 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.WebApi
 {
+    internal sealed class MetricsServiceReduced
+    {
+        private EventCounterPipeline _counterPipeline;
+        private readonly MetricsStoreService _store;
+        private IOptionsMonitor<MetricsOptions> _optionsMonitor;
+
+        public MetricsServiceReduced(
+            IOptionsMonitor<MetricsOptions> optionsMonitor,
+            MetricsStoreService metricsStore)
+        {
+            _store = metricsStore;
+            _optionsMonitor = optionsMonitor;
+        }
+
+        public async Task ExecuteAsync(IEndpointInfo endpointInfo, CancellationToken stoppingToken)
+        {
+            var client = new DiagnosticsClient(endpointInfo.Endpoint);
+
+            MetricsOptions options = _optionsMonitor.CurrentValue;
+            using var optionsTokenSource = new CancellationTokenSource();
+
+            //If metric options change, we need to cancel the existing metrics pipeline and restart with the new settings.
+            using IDisposable monitorListener = _optionsMonitor.OnChange((_, _) => optionsTokenSource.SafeCancel());
+
+            EventPipeCounterPipelineSettings counterSettings = EventCounterSettingsFactory.CreateSettings(options);
+
+            _counterPipeline = new EventCounterPipeline(client, counterSettings, loggers: new[] { new MetricsLogger(_store.MetricsStore) });
+
+            using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, optionsTokenSource.Token);
+            await _counterPipeline.RunAsync(linkedTokenSource.Token);
+        }
+
+        public async Task DisposeAsync()
+        {
+            if (_counterPipeline != null)
+            {
+                await _counterPipeline.DisposeAsync();
+            }
+        }
+    }
+
     /// <summary>
     /// Periodically gets metrics from the app, and persists these to a metrics store.
     /// </summary>

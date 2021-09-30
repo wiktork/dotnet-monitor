@@ -9,6 +9,33 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor.CollectionRules
 {
+    internal sealed class MetricsCallbacks : IEndpointInfoSourceCallbacks
+    {
+        private readonly MetricsServiceReduced _metricsService;
+
+        public MetricsCallbacks(MetricsServiceReduced service)
+        {
+            _metricsService = service;
+        }
+
+        public Task OnAddedEndpointInfoAsync(IEndpointInfo endpointInfo, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public async Task OnBeforeResumeAsync(IEndpointInfo endpointInfo, CancellationToken cancellationToken)
+        {
+            //TODO Check if it's the default process, but cannot use IDiagnosticServices
+            //_ = _metricsService.ExecuteAsync(endpointInfo, cancellationToken);
+            await Task.Delay(1000);
+            return;
+        }
+
+        public void OnRemovedEndpointInfo(IEndpointInfo endpointInfo)
+        {
+        }
+    }
+
     internal class CollectionRuleEndpointInfoSourceCallbacks :
         IEndpointInfoSourceCallbacks
     {

@@ -94,7 +94,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
             services.AddSingleton<ActionListExecutor>();
             services.AddSingleton<CollectionRuleService>();
-            services.AddSingleton<IEndpointInfoSourceCallbacks, CollectionRuleEndpointInfoSourceCallbacks>();
+            services.AddSingleton<MetricsStoreService>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IEndpointInfoSourceCallbacks, CollectionRuleEndpointInfoSourceCallbacks>());
 
             return services;
         }
