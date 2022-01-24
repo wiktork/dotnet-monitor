@@ -558,20 +558,22 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                 }
 
                 var traceLog = Microsoft.Diagnostics.Tracing.Etlx.TraceLog.CreateFromEventTraceLogFile(tmpFile);
-                
 
-
-                return Ok();
+                return await Result(Utilities.ArtifactType_Stacks, egressProvider, async (stream, token) =>
+                {
+                    await SerializeStack(stream, traceLog);
+                }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
 
             }, processKey, Utilities.ArtifactType_Stacks);
         }
 
-        public void SerializeStack(string tempEtlxFilename)
+        public async Task SerializeStack(Stream stream, string tempEtlxFilename)
         {
             try
             {
                 using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null))
                 using (var eventLog = new Tracing.Etlx.TraceLog(tempEtlxFilename))
+                using (StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, 4096, leaveOpen: true))
                 {
                     var stackSource = new MutableTraceEventStackSource(eventLog)
                     {
@@ -608,7 +610,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                     // For every thread recorded in our trace, print the first stack
                     foreach (var (threadId, samples) in samplesForThread)
                     {
-                        PrintStack(threadId, samples[0], stackSource);
+                        await PrintStack(writer, threadId, samples[0], stackSource);
                     }
                 }
             }
@@ -621,17 +623,19 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
             }
         }
 
-        private static void PrintStack(int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
+        private static async Task PrintStack(TextWriter writer, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
         {
-            //console.Out.WriteLine($"Thread (0x{threadId:X}):");
+            await writer.WriteLineAsync($"Thread (0x{threadId:X}):");
             var stackIndex = stackSourceSample.StackIndex;
             while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread ("))
             {
                 string frame = $"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
                     .Replace("UNMANAGED_CODE_TIME", "[Native Frames]");
                 stackIndex = stackSource.GetCallerIndex(stackIndex);
+
+                await writer.WriteLineAsync(frame);
             }
-            //console.Out.WriteLine();
+            await writer.WriteLineAsync();
         }
 
         private static string GetDotnetMonitorVersion()
