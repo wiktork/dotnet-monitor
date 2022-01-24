@@ -9,6 +9,11 @@ using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Monitoring.Options;
 using Microsoft.Diagnostics.Monitoring.WebApi.Validation;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Symbols;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Analysis;
+using Microsoft.Diagnostics.Tracing.Etlx;
+using Microsoft.Diagnostics.Tracing.Stacks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -505,6 +510,128 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                 _logger.WrittenToHttpStream();
                 return new ActionResult<Models.DotnetMonitorInfo>(dotnetMonitorInfo);
             }, _logger);
+        }
+
+        [HttpPost("stacks", Name = nameof(CaptureStacks))]
+        [ProducesWithProblemDetails(ContentTypes.ApplicationNdJson, ContentTypes.ApplicationJson, ContentTypes.TextPlain)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status202Accepted)]
+        [RequestLimit(LimitKey = Utilities.ArtifactType_Stacks)]
+        [EgressValidation]
+        public async Task<ActionResult> CaptureStacks(
+            [FromQuery]
+            int? pid = null,
+            [FromQuery]
+            Guid? uid = null,
+            [FromQuery]
+            string name = null,
+            [FromQuery][Range(-1, int.MaxValue)]
+            int durationSeconds = 30,
+            [FromQuery]
+            string egressProvider = null)
+        {
+            ProcessKey? processKey = GetProcessKey(pid, uid, name);
+
+            return await InvokeForProcess(async processInfo =>
+            {
+                var configuration = new EventPipeProviderSourceConfiguration(
+                    requestRundown: true,
+                    providers: new EventPipeProvider(MonitoringSourceConfiguration.SampleProfilerProviderName,
+                                                     System.Diagnostics.Tracing.EventLevel.Informational));
+
+                EventTracePipelineSettings settings = new EventTracePipelineSettings
+                {
+                    Configuration = configuration,
+                    Duration = Utilities.ConvertSecondsToTimeSpan(durationSeconds)
+                };
+
+                string tmpFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                using (FileStream file = new FileStream(tmpFile, FileMode.CreateNew))
+                {
+                    await using EventTracePipeline eventTracePipeline = new EventTracePipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
+                    settings, async (Stream stream, CancellationToken token) =>
+                    {
+                        await stream.CopyToAsync(file, 0x1000, HttpContext.RequestAborted);
+                    });
+                    await eventTracePipeline.RunAsync(HttpContext.RequestAborted);
+                }
+
+                var traceLog = Microsoft.Diagnostics.Tracing.Etlx.TraceLog.CreateFromEventTraceLogFile(tmpFile);
+                
+
+
+                return Ok();
+
+            }, processKey, Utilities.ArtifactType_Stacks);
+        }
+
+        public void SerializeStack(string tempEtlxFilename)
+        {
+            try
+            {
+                using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null))
+                using (var eventLog = new Tracing.Etlx.TraceLog(tempEtlxFilename))
+                {
+                    var stackSource = new MutableTraceEventStackSource(eventLog)
+                    {
+                        OnlyManagedCodeStacks = true
+                    };
+
+                    var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
+                    computer.GenerateThreadTimeStacks(stackSource);
+
+                    var samplesForThread = new Dictionary<int, List<StackSourceSample>>();
+
+                    stackSource.ForEach((sample) =>
+                    {
+                        var stackIndex = sample.StackIndex;
+                        while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
+                            stackIndex = stackSource.GetCallerIndex(stackIndex);
+
+                        // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
+                        // Thread id is in the frame name as "Thread (<ID>)"
+                        string template = "Thread (";
+                        string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
+                        int threadId = int.Parse(threadFrame.Substring(template.Length, threadFrame.Length - (template.Length + 1)));
+
+                        if (samplesForThread.TryGetValue(threadId, out var samples))
+                        {
+                            samples.Add(sample);
+                        }
+                        else
+                        {
+                            samplesForThread[threadId] = new List<StackSourceSample>() { sample };
+                        }
+                    });
+
+                    // For every thread recorded in our trace, print the first stack
+                    foreach (var (threadId, samples) in samplesForThread)
+                    {
+                        PrintStack(threadId, samples[0], stackSource);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+            }
+            finally
+            {
+            }
+        }
+
+        private static void PrintStack(int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
+        {
+            //console.Out.WriteLine($"Thread (0x{threadId:X}):");
+            var stackIndex = stackSourceSample.StackIndex;
+            while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread ("))
+            {
+                string frame = $"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
+                    .Replace("UNMANAGED_CODE_TIME", "[Native Frames]");
+                stackIndex = stackSource.GetCallerIndex(stackIndex);
+            }
+            //console.Out.WriteLine();
         }
 
         private static string GetDotnetMonitorVersion()
