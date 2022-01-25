@@ -512,7 +512,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
             }, _logger);
         }
 
-        [HttpPost("stacks", Name = nameof(CaptureStacks))]
+        [HttpGet("stacks", Name = nameof(CaptureStacks))]
         [ProducesWithProblemDetails(ContentTypes.ApplicationNdJson, ContentTypes.ApplicationJson, ContentTypes.TextPlain)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
         [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
@@ -527,7 +527,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
             [FromQuery]
             string name = null,
             [FromQuery][Range(-1, int.MaxValue)]
-            int durationSeconds = 30,
+            int durationSeconds = 5,
             [FromQuery]
             string egressProvider = null)
         {
@@ -546,7 +546,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                     Duration = Utilities.ConvertSecondsToTimeSpan(durationSeconds)
                 };
 
-                string tmpFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                string tmpFile = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), ".nettrace");
                 using (FileStream file = new FileStream(tmpFile, FileMode.CreateNew))
                 {
                     await using EventTracePipeline eventTracePipeline = new EventTracePipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
