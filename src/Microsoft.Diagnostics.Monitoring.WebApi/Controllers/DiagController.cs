@@ -543,7 +543,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                 EventTracePipelineSettings settings = new EventTracePipelineSettings
                 {
                     Configuration = configuration,
-                    Duration = Utilities.ConvertSecondsToTimeSpan(durationSeconds)
+                    Duration = TimeSpan.FromMilliseconds(10)
                 };
 
                 string tmpFile = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), ".nettrace");
