@@ -533,7 +533,55 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
         {
             ProcessKey? processKey = GetProcessKey(pid, uid, name);
 
+            System.Net.Sockets.UnixDomainSocketEndPoint ep =
+                new System.Net.Sockets.UnixDomainSocketEndPoint(Environment.ExpandEnvironmentVariables(@"%TEMP%\sampler.sock"));
+
+            using System.Net.Sockets.Socket s =
+                new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.Unix, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Unspecified);
+
+#if NET6_0_OR_GREATER
+            await s.ConnectAsync(ep);
+#endif
             return await InvokeForProcess(async processInfo =>
+            {
+                var configuration = new EventPipeProviderSourceConfiguration(
+                    requestRundown: false,
+                    providers: new EventPipeProvider(MonitoringSourceConfiguration.SampleProfilerProviderName,
+                                                     System.Diagnostics.Tracing.EventLevel.Informational));
+
+                EventTracePipelineSettings settings = new EventTracePipelineSettings
+                {
+                    Configuration = configuration,
+                    Duration = TimeSpan.FromMilliseconds(10)
+                };
+
+                string tmpFile = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), ".nettrace");
+                using (FileStream file = new FileStream(tmpFile, FileMode.CreateNew))
+                {
+                    await using EventTracePipeline eventTracePipeline = new EventTracePipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
+                    settings, async (Stream stream, CancellationToken token) =>
+                    {
+                        await stream.CopyToAsync(file, 0x1000, HttpContext.RequestAborted);
+                    });
+                    await eventTracePipeline.RunAsync(HttpContext.RequestAborted);
+                }
+
+                //TODO Convert to a realtime consumption with no interim artifact
+                var traceLog = Microsoft.Diagnostics.Tracing.Etlx.TraceLog.CreateFromEventTraceLogFile(tmpFile);
+
+                return await Result(Utilities.ArtifactType_Stacks, egressProvider, async (stream, token) =>
+                {
+                    await SerializeStack(stream, traceLog);
+                }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
+
+            }, processKey, Utilities.ArtifactType_Stacks);
+        }
+
+        private Task<ActionResult> UseRundown(int pid, Guid uid, string name, string egressProvider)
+        {
+            ProcessKey? processKey = GetProcessKey(pid, uid, name);
+
+            return InvokeForProcess(async processInfo =>
             {
                 var configuration = new EventPipeProviderSourceConfiguration(
                     requestRundown: true,
@@ -563,7 +611,6 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                 {
                     await SerializeStack(stream, traceLog);
                 }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
-
             }, processKey, Utilities.ArtifactType_Stacks);
         }
 
