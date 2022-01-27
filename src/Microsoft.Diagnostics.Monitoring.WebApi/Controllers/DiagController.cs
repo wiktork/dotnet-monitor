@@ -546,8 +546,8 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
             {
                 var configuration = new EventPipeProviderSourceConfiguration(
                     requestRundown: false,
-                    providers: new EventPipeProvider(MonitoringSourceConfiguration.SampleProfilerProviderName,
-                                                     System.Diagnostics.Tracing.EventLevel.Informational));
+                    providers: new EventPipeProvider("MySuperAwesomeEventPipeProvider",
+                                                     System.Diagnostics.Tracing.EventLevel.LogAlways));
 
                 EventTracePipelineSettings settings = new EventTracePipelineSettings
                 {
@@ -567,11 +567,20 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                 }
 
                 //TODO Convert to a realtime consumption with no interim artifact
-                var traceLog = Microsoft.Diagnostics.Tracing.Etlx.TraceLog.CreateFromEventTraceLogFile(tmpFile);
+                var tempEtlxFilename = Microsoft.Diagnostics.Tracing.Etlx.TraceLog.CreateFromEventTraceLogFile(tmpFile);
 
-                return await Result(Utilities.ArtifactType_Stacks, egressProvider, async (stream, token) =>
+                return await Result(Utilities.ArtifactType_Stacks, egressProvider, (stream, token) =>
                 {
-                    await SerializeStack(stream, traceLog);
+                    using (var eventLog = new Tracing.Etlx.TraceLog(tempEtlxFilename))
+                    using (StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, 4096, leaveOpen: true))
+                    {
+                        foreach(var traceEvent in eventLog.Events)
+                        {
+                            continue;
+                        }
+                    }
+
+                    return Task.FromResult(new OkResult());
                 }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
 
             }, processKey, Utilities.ArtifactType_Stacks);
