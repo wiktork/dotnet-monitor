@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Monitoring.Options;
+using Microsoft.Diagnostics.Monitoring.WebApi.Stacks;
 using Microsoft.Diagnostics.Monitoring.WebApi.Validation;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Symbols;
@@ -544,41 +545,34 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
 #endif
             return await InvokeForProcess(async processInfo =>
             {
-                var configuration = new EventPipeProviderSourceConfiguration(
-                    requestRundown: false,
-                    providers: new EventPipeProvider("MySuperAwesomeEventPipeProvider",
-                                                     System.Diagnostics.Tracing.EventLevel.LogAlways));
 
-                EventTracePipelineSettings settings = new EventTracePipelineSettings
+                var settings = new EventStacksPipelineSettings
                 {
-                    Configuration = configuration,
                     Duration = TimeSpan.FromMilliseconds(10)
                 };
 
                 string tmpFile = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), ".nettrace");
                 using (FileStream file = new FileStream(tmpFile, FileMode.CreateNew))
                 {
-                    await using EventTracePipeline eventTracePipeline = new EventTracePipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
-                    settings, async (Stream stream, CancellationToken token) =>
-                    {
-                        await stream.CopyToAsync(file, 0x1000, HttpContext.RequestAborted);
-                    });
+                    await using var eventTracePipeline = new EventStacksPipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
+                    settings);
+
                     await eventTracePipeline.RunAsync(HttpContext.RequestAborted);
                 }
 
                 //TODO Convert to a realtime consumption with no interim artifact
-                var tempEtlxFilename = Microsoft.Diagnostics.Tracing.Etlx.TraceLog.CreateFromEventTraceLogFile(tmpFile);
+
 
                 return await Result(Utilities.ArtifactType_Stacks, egressProvider, (stream, token) =>
                 {
-                    using (var eventLog = new Tracing.Etlx.TraceLog(tempEtlxFilename))
-                    using (StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, 4096, leaveOpen: true))
-                    {
-                        foreach(var traceEvent in eventLog.Events)
-                        {
-                            continue;
-                        }
-                    }
+                    //using (var eventLog = new Tracing.Etlx.TraceLog(tempEtlxFilename))
+                    //using (StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, 4096, leaveOpen: true))
+                    //{
+                    //    foreach(var traceEvent in eventLog.Events)
+                    //    {
+                    //        continue;
+                    //    }
+                    //}
 
                     return Task.FromResult(new OkResult());
                 }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
