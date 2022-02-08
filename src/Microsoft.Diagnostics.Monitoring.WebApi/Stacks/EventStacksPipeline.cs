@@ -1,6 +1,7 @@
 ﻿using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Parsers;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,13 +32,15 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
            eventSource.Dynamic.AddCallbackForProviderEvents((string provider, string _) => provider == "MySuperAwesomeEventPipeProvider" ?
            EventFilterResponse.AcceptEvent : EventFilterResponse.RejectProvider, Callback);
 
+           var attach = new StackTraceEventParser(eventSource);
+            attach.
 
             return base.OnEventSourceAvailable(eventSource, stopSessionAsync, token);
         }
 
         private void Callback(TraceEvent action)
         {
-            return;
+            
         }
     }
 }
