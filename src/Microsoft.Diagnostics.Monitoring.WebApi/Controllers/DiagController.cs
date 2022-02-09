@@ -551,30 +551,21 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                     Duration = TimeSpan.FromMilliseconds(10)
                 };
 
-                string tmpFile = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), ".nettrace");
-                using (FileStream file = new FileStream(tmpFile, FileMode.CreateNew))
-                {
-                    await using var eventTracePipeline = new EventStacksPipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
-                    settings);
+                await using var eventTracePipeline = new EventStacksPipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
+                settings);
 
-                    await eventTracePipeline.RunAsync(HttpContext.RequestAborted);
-                }
+                await eventTracePipeline.RunAsync(HttpContext.RequestAborted);
+    
 
                 //TODO Convert to a realtime consumption with no interim artifact
 
 
-                return await Result(Utilities.ArtifactType_Stacks, egressProvider, (stream, token) =>
+                return await Result(Utilities.ArtifactType_Stacks, egressProvider, async (stream, token) =>
                 {
-                    //using (var eventLog = new Tracing.Etlx.TraceLog(tempEtlxFilename))
-                    //using (StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, 4096, leaveOpen: true))
-                    //{
-                    //    foreach(var traceEvent in eventLog.Events)
-                    //    {
-                    //        continue;
-                    //    }
-                    //}
+                    var result = await eventTracePipeline.Result;
+                    using StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+                    writer.WriteLine(result.Stacks.Count.ToString());
 
-                    return Task.FromResult(new OkResult());
                 }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
 
             }, processKey, Utilities.ArtifactType_Stacks);
