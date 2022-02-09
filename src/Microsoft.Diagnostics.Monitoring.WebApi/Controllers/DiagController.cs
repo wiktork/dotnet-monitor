@@ -564,7 +564,19 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                 {
                     var result = await eventTracePipeline.Result;
                     using StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-                    writer.WriteLine(result.Stacks.Count.ToString());
+                    foreach(var stack in result.Stacks)
+                    {
+                        await writer.WriteLineAsync($"ThreadID: {stack.ThreadId}");
+                        foreach(var frame in stack.Frames)
+                        {
+                            string name = "Unknown";
+                            if (result.NameCache.FunctionData.TryGetValue(frame.FunctionId, out FunctionData d))
+                            {
+                                name = d.Name;
+                            }
+                            await writer.WriteLineAsync($"    {name}");
+                        }
+                    };
 
                 }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
 

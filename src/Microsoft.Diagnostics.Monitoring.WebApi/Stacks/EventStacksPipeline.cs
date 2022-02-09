@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
     internal sealed class EventStacksPipeline : EventSourcePipeline<EventStacksPipelineSettings>
     {
         private TaskCompletionSource<StackResult> _stackResult = new();
+        private StackResult _result = new();
 
         public EventStacksPipeline(DiagnosticsClient client, EventStacksPipelineSettings settings)
             : base(client, settings)
@@ -47,14 +48,14 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
 
         private void Callback(TraceEvent action)
         {
-            StackResult result = new StackResult();
+
             if (action.ID == (TraceEventID)1)
             {
                 Stack stack = new Stack();
-                stack.ThreadId = (long)action.PayloadByName("ThreadId");
+                stack.ThreadId = (long)(ulong)action.PayloadByName("ThreadId");
                 var functionIds = (long[])action.PayloadByName("FunctionIds");
                 var offsets = (long[])action.PayloadByName("IpOffsets");
-                result.Stacks.Add(stack);
+                _result.Stacks.Add(stack);
 
                 for (int i = 0; i < functionIds.Length; i++)
                 {
@@ -63,10 +64,16 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
             }
             if (action.ID == (TraceEventID)2)
             {
- 
-            }
+                FunctionData functionData = new();
+                functionData.Name = (string)action.PayloadByName("Name");
+                ulong id = (ulong)action.PayloadByName("FunctionId");
 
-            _stackResult.TrySetResult(result);
+                _result.NameCache.FunctionData.Add((long)id, functionData);
+            }
+            if (action.ID == (TraceEventID)5)
+            {
+                _stackResult.TrySetResult(_result);
+            }
         }
     }
 
