@@ -569,12 +569,17 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                         await writer.WriteLineAsync($"ThreadID: {stack.ThreadId}");
                         foreach(var frame in stack.Frames)
                         {
-                            string name = "Unknown";
-                            if (result.NameCache.FunctionData.TryGetValue(frame.FunctionId, out FunctionData d))
+                            string className = "UnknownClass";
+                            string functionName = "UnknownFunction";
+                            if (result.NameCache.FunctionData.TryGetValue(frame.FunctionId, out FunctionData functionData))
                             {
-                                name = d.Name;
+                                functionName = functionData.Name;
+                                if (result.NameCache.ClassData.TryGetValue(functionData.ParentClass, out ClassData classData))
+                                {
+                                    className = classData.Name;
+                                }
                             }
-                            await writer.WriteLineAsync($"    {name}");
+                            await writer.WriteLineAsync($"    {className}.{functionName}");
                         }
                     };
 

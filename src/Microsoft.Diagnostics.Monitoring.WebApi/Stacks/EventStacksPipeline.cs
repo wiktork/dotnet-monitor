@@ -62,15 +62,23 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
                     stack.Frames.Add(new StackFrame { FunctionId = functionIds[i], Offset = offsets[i] });
                 }
             }
-            if (action.ID == (TraceEventID)2)
+            else if (action.ID == (TraceEventID)2)
             {
                 FunctionData functionData = new();
                 functionData.Name = (string)action.PayloadByName("Name");
                 ulong id = (ulong)action.PayloadByName("FunctionId");
+                functionData.ParentClass = (long)(ulong)action.PayloadByName("ClassId");
 
                 _result.NameCache.FunctionData.Add((long)id, functionData);
             }
-            if (action.ID == (TraceEventID)5)
+            else if (action.ID == (TraceEventID)3)
+            {
+                ClassData classData= new();
+                classData.Name = (string)action.PayloadByName("Name");
+                ulong id = (ulong)action.PayloadByName("ClassId");
+                _result.NameCache.ClassData.Add((long)id, classData);
+            }
+            else if (action.ID == (TraceEventID)5)
             {
                 _stackResult.TrySetResult(_result);
             }
