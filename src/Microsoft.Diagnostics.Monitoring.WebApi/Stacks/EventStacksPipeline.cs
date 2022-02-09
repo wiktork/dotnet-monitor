@@ -68,15 +68,25 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
                 functionData.Name = (string)action.PayloadByName("Name");
                 ulong id = (ulong)action.PayloadByName("FunctionId");
                 functionData.ParentClass = (long)(ulong)action.PayloadByName("ClassId");
-
+                functionData.ModuleId = (long)(ulong)action.PayloadByName("ModuleId");
+                functionData.TypeArgs = (long[])action.PayloadByName("TypeArgs") ?? Array.Empty<long>();
                 _result.NameCache.FunctionData.Add((long)id, functionData);
             }
             else if (action.ID == (TraceEventID)3)
             {
                 ClassData classData= new();
                 classData.Name = (string)action.PayloadByName("Name");
+                classData.TypeArgs = (long[])action.PayloadByName("TypeArgs") ?? Array.Empty<long>();
                 ulong id = (ulong)action.PayloadByName("ClassId");
+
                 _result.NameCache.ClassData.Add((long)id, classData);
+            }
+            else if (action.ID == (TraceEventID)4)
+            {
+                ModuleData moduleData = new();
+                moduleData.Name = (string)action.PayloadByName("Name");
+                ulong id = (ulong)action.PayloadByName("ModuleId");
+                _result.NameCache.ModuleData.Add((long)id, moduleData);
             }
             else if (action.ID == (TraceEventID)5)
             {
@@ -92,7 +102,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
 
         public long[] TypeArgs { get; set; }
 
-        long ModuleId { get; set; }
+        public long ModuleId { get; set; }
     }
 
     internal sealed class FunctionData
@@ -102,7 +112,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
 
         public long[] TypeArgs { get; set; }
 
-        long ModuleId { get; set; }
+        public long ModuleId { get; set; }
     }
 
     internal sealed class ModuleData

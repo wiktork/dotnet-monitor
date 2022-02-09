@@ -571,21 +571,45 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                         {
                             string className = "UnknownClass";
                             string functionName = "UnknownFunction";
+                            string moduleName = "UnknownModule";
+                            string parentClassName = string.Empty;
                             if (result.NameCache.FunctionData.TryGetValue(frame.FunctionId, out FunctionData functionData))
                             {
                                 functionName = functionData.Name;
-                                if (result.NameCache.ClassData.TryGetValue(functionData.ParentClass, out ClassData classData))
+                                if (result.NameCache.ModuleData.TryGetValue(functionData.ModuleId, out ModuleData moduleData))
                                 {
-                                    className = classData.Name;
+                                    moduleName = moduleData.Name;
                                 }
+                                className = GetClassName(result.NameCache, functionData.ParentClass);
                             }
-                            await writer.WriteLineAsync($"    {className}.{functionName}");
+                            await writer.WriteLineAsync($"    [{moduleName}]{parentClassName}{className}.{functionName}");
                         }
                     };
 
                 }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
 
             }, processKey, Utilities.ArtifactType_Stacks);
+        }
+
+        private string GetClassName(NameCache cache, long classId)
+        {
+            string name = "Unknown";
+            if (cache.ClassData.TryGetValue(classId, out ClassData classData))
+            {
+                name = classData.Name;
+                if (classData.ParentClass != 0)
+                {
+                    string parentName = GetClassName(cache, classData.ParentClass);
+                    {
+                        name = $"{parentName}+{name}";
+                    };
+                }
+                if (classData.TypeArgs.Length > 0)
+                {
+                    name = $"<{classData.TypeArgs.Select(id => GetClassName(cache, id)).Aggregate((a, b) => a + "," + b)}>";
+                }
+            }
+            return name;
         }
 
         private Task<ActionResult> UseRundown(int pid, Guid uid, string name, string egressProvider)
