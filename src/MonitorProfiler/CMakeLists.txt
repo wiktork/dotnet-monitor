@@ -16,6 +16,8 @@ set(SOURCES
     ${PROFILER_SOURCES}
     Environment/EnvironmentHelper.cpp
     Environment/ProfilerEnvironment.cpp
+    EventProvider/ProfilerEventProvider.cpp
+    EventProvider/ProfilerEvent.cpp
     Logging/AggregateLogger.cpp
     Logging/NullLogger.cpp
     MainProfiler/ExceptionTracker.cpp
