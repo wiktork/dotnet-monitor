@@ -1,7 +1,13 @@
 #include "StacksEventProvider.h"
 #include <corhlpr.h>
+#include <array>
 
-
+static COR_PRF_EVENTPIPE_PARAM_DESC CallStackEventDescriptor[] =
+{
+    { COR_PRF_EVENTPIPE_UINT64,   0,                          L"ThreadId" },
+    { COR_PRF_EVENTPIPE_ARRAY,    COR_PRF_EVENTPIPE_INT64,    L"FunctionIds" },
+    { COR_PRF_EVENTPIPE_ARRAY,    COR_PRF_EVENTPIPE_INT64,    L"IpOffsets" }
+};
 
 static COR_PRF_EVENTPIPE_PARAM_DESC FunctionIdDescriptor[] =
 {
@@ -41,16 +47,13 @@ HRESULT StacksEventProvider::CreateProvider(ICorProfilerInfo12* profilerInfo, st
 
 HRESULT StacksEventProvider::DefineEvents()
 {
-    //HRESULT hr;
+    HRESULT hr;
 
-    COR_PRF_EVENTPIPE_PARAM_DESC CallStackEventDescriptor[] =
-    {
-        { COR_PRF_EVENTPIPE_UINT64,   0,                          L"ThreadId" },
-        { COR_PRF_EVENTPIPE_ARRAY,    COR_PRF_EVENTPIPE_INT64,    L"FunctionIds" },
-        { COR_PRF_EVENTPIPE_ARRAY,    COR_PRF_EVENTPIPE_INT64,    L"IpOffsets" }
-    };
-
-    _provider->DefineEvent<3>(L"Callstack", CallStackEventDescriptor, _callstackEvent);
+    IfFailRet(_provider->DefineEvent(L"Callstack", CallStackEventDescriptor, _callstackEvent));
+    IfFailRet(_provider->DefineEvent(L"FunctionDesc", FunctionIdDescriptor, _functionIdEvent));
+    IfFailRet(_provider->DefineEvent(L"ClassDesc", ClassIdDescriptor, _classIdEvent));
+    IfFailRet(_provider->DefineEvent(L"ModuleDesc", ModuleDescriptor, _moduleEvent));
+    IfFailRet(_provider->DefineEvent(L"End", _endEvent));
 
     return S_OK;
 }

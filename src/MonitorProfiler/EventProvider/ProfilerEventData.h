@@ -2,6 +2,8 @@
 
 #include "cor.h"
 #include "corprof.h"
+#include <vector>
+#include <wstring>
 
 template<size_t DataSize>
 class ProfilerEventData
@@ -14,15 +16,8 @@ class ProfilerEventData
             eventData[Index].ptr = reinterpret_cast<UINT64>(&data);
             eventData[Index].size = sizeof(UINT64);
         }
-        template<size_t Index, typename T>
-        void WriteData(const T& data)
-        {
-            static_assert(Index < DataSize);
-            eventData[Index].ptr = reinterpret_cast<UINT64>(&data);
-            eventData[Index].size = sizeof(UINT64);
-        }
 
-        template<size_t Index, typename T>
+        template<size_t Index>
         void WriteData(const std::wstring& data)
         {
             static_assert(Index < DataSize);

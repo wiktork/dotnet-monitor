@@ -8,12 +8,10 @@ class StacksEventProvider
     public:
         static HRESULT CreateProvider(ICorProfilerInfo12* profilerInfo, std::unique_ptr<StacksEventProvider>& eventProvider);
     private:
-        //static COR_PRF_EVENTPIPE_PARAM_DESC CallStackEventDescriptor[];
-        //static COR_PRF_EVENTPIPE_PARAM_DESC FunctionIdDescriptor[];
-        //static COR_PRF_EVENTPIPE_PARAM_DESC ClassIdDescriptor[];
-        //static COR_PRF_EVENTPIPE_PARAM_DESC ModuleDescriptor[];
 
         HRESULT DefineEvents();
+
+        HRESULT WriteCallstack();
 
         StacksEventProvider(ICorProfilerInfo12* profilerInfo, std::unique_ptr<ProfilerEventProvider> & eventProvider) :
             _profilerInfo(profilerInfo), _provider(std::move(eventProvider))

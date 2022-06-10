@@ -16,3 +16,26 @@ HRESULT ProfilerEventProvider::CreateProvider(const WCHAR* providerName, ICorPro
 ProfilerEventProvider::ProfilerEventProvider(ICorProfilerInfo12* profilerInfo, EVENTPIPE_PROVIDER provider) : _provider(provider), _profilerInfo(profilerInfo)
 {
 }
+
+HRESULT ProfilerEventProvider::DefineEvent(const WCHAR* eventName, COR_PRF_EVENTPIPE_PARAM_DESC* descriptors, UINT32 descriptorsLen, std::unique_ptr<ProfilerEvent>& profilerEventDescriptor)
+{
+    EVENTPIPE_EVENT event = 0;
+    HRESULT hr = _profilerInfo->EventPipeDefineEvent(
+        _provider,
+        eventName,
+        _currentEventId,
+        0, //We not use keywords
+        1, // eventVersion
+        COR_PRF_EVENTPIPE_LOGALWAYS,
+        0, //We not use opcodes
+        FALSE, //No need for stacks
+        descriptorsLen,
+        descriptors,
+        &event);
+    if (SUCCEEDED(hr))
+    {
+        profilerEventDescriptor = std::unique_ptr<ProfilerEvent>(new ProfilerEvent(_profilerInfo, event));
+        _currentEventId++;
+    }
+    return hr;
+}
