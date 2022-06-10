@@ -18,13 +18,13 @@ set(SOURCES
     Environment/ProfilerEnvironment.cpp
     EventProvider/ProfilerEventProvider.cpp
     EventProvider/ProfilerEvent.cpp
-    EventProvider/StacksEventProvider.cpp
     Logging/AggregateLogger.cpp
     Logging/NullLogger.cpp
     MainProfiler/ExceptionTracker.cpp
     MainProfiler/MainProfiler.cpp
     MainProfiler/ThreadData.cpp
     MainProfiler/ThreadDataManager.cpp
+    Stacks/StacksEventProvider.cpp
     ClassFactory.cpp
     DllMain.cpp
     ProfilerBase.cpp

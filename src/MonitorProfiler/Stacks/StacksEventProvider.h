@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ProfilerEventProvider.h"
+#include "../EventProvider/ProfilerEventProvider.h"
 #include <memory>
 
 class StacksEventProvider

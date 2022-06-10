@@ -1,6 +1,5 @@
 #include "StacksEventProvider.h"
 #include <corhlpr.h>
-#include <array>
 
 static COR_PRF_EVENTPIPE_PARAM_DESC CallStackEventDescriptor[] =
 {
