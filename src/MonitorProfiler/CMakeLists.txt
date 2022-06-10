@@ -18,6 +18,7 @@ set(SOURCES
     Environment/ProfilerEnvironment.cpp
     EventProvider/ProfilerEventProvider.cpp
     EventProvider/ProfilerEvent.cpp
+    EventProvider/StacksEventProvider.cpp
     Logging/AggregateLogger.cpp
     Logging/NullLogger.cpp
     MainProfiler/ExceptionTracker.cpp
