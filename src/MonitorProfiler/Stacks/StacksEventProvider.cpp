@@ -1,5 +1,7 @@
 #include "StacksEventProvider.h"
 #include <corhlpr.h>
+#include "cor.h"
+#include "../EventProvider/ProfilerEventData.h"
 
 static COR_PRF_EVENTPIPE_PARAM_DESC CallStackEventDescriptor[] =
 {
@@ -53,6 +55,17 @@ HRESULT StacksEventProvider::DefineEvents()
     IfFailRet(_provider->DefineEvent(L"ClassDesc", ClassIdDescriptor, _classIdEvent));
     IfFailRet(_provider->DefineEvent(L"ModuleDesc", ModuleDescriptor, _moduleEvent));
     IfFailRet(_provider->DefineEvent(L"End", _endEvent));
+
+    return S_OK;
+}
+
+HRESULT StacksEventProvider::WriteCallstack(const Stack& stack)
+{
+
+    ProfilerEventData<3> profilerEventData;
+    profilerEventData.WriteData<0>(stack.GetThreadId());
+    
+
 
     return S_OK;
 }

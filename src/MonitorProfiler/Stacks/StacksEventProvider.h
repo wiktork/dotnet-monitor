@@ -2,6 +2,7 @@
 
 #include "../EventProvider/ProfilerEventProvider.h"
 #include <memory>
+#include "Stack.h"
 
 class StacksEventProvider
 {
@@ -11,7 +12,7 @@ class StacksEventProvider
 
         HRESULT DefineEvents();
 
-        HRESULT WriteCallstack();
+        HRESULT WriteCallstack(const Stack& stack);
 
         StacksEventProvider(ICorProfilerInfo12* profilerInfo, std::unique_ptr<ProfilerEventProvider> & eventProvider) :
             _profilerInfo(profilerInfo), _provider(std::move(eventProvider))

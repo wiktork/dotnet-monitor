@@ -3,7 +3,7 @@
 #include "cor.h"
 #include "corprof.h"
 #include <vector>
-#include <wstring>
+#include "tstring.h"
 
 template<size_t DataSize>
 class ProfilerEventData
@@ -18,7 +18,7 @@ class ProfilerEventData
         }
 
         template<size_t Index>
-        void WriteData(const std::wstring& data)
+        void WriteData(const tstring& data)
         {
             static_assert(Index < DataSize);
 
@@ -63,5 +63,5 @@ class ProfilerEventData
 
     private:
         COR_PRF_EVENT_DATA eventData[DataSize];
-    }
+
 };
