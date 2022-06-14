@@ -34,6 +34,16 @@ static COR_PRF_EVENTPIPE_PARAM_DESC ModuleDescriptor[] =
     { COR_PRF_EVENTPIPE_STRING, 0, L"Name"}
 };
 
+static UINT_PTR GetOffsetFromFrame(const StackFrame& frame)
+{
+    return frame.GetOffset();
+}
+
+static FunctionID GetFunctionIdFromFrame(const StackFrame& frame)
+{
+    return frame.GetFunctionId();
+}
+
 HRESULT StacksEventProvider::CreateProvider(ICorProfilerInfo12* profilerInfo, std::unique_ptr<StacksEventProvider>& eventProvider)
 {
     std::unique_ptr<ProfilerEventProvider> provider;
@@ -61,10 +71,12 @@ HRESULT StacksEventProvider::DefineEvents()
 
 HRESULT StacksEventProvider::WriteCallstack(const Stack& stack)
 {
-
     ProfilerEventData<3> profilerEventData;
     profilerEventData.WriteData<0>(stack.GetThreadId());
-    
+    const std::vector<StackFrame>& frames = stack.GetFrames();
+    profilerEventData.WriteData<1>(frames, &GetFunctionIdFromFrame);
+    profilerEventData.WriteData<2>(frames, &GetOffsetFromFrame);
+
 
 
     return S_OK;

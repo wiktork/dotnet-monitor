@@ -32,23 +32,48 @@ class ProfilerEventData
             static_assert(Index < DataSize);
             std::vector<BYTE> buffer = std::move(GetEventBuffer(data));
 
-            eventData[Index].ptr = reinterpret_cast<UINT64>(&buffer.data());
-            eventData[Index].size = buffer.size() * sizeof(UINT64);
+            eventData[Index].ptr = reinterpret_cast<UINT64>(buffer.data());
+            eventData[Index].size = static_cast<UINT32>(buffer.size() * sizeof(UINT64));
+        }
+        template<size_t Index, typename T, typename U>
+        void WriteData(const std::vector<T>& data, U (*transform)(const T&))
+        {
+            static_assert(Index < DataSize);
+            std::vector<BYTE> buffer = std::move(GetEventBuffer(data, transform));
+
+            eventData[Index].ptr = reinterpret_cast<UINT64>(buffer.data());
+            eventData[Index].size = static_cast<UINT32>(buffer.size() * sizeof(UINT64));
         }
     private:
         template<typename T>
         static std::vector<BYTE> GetEventBuffer(const std::vector<T>& data)
         {
+            return GetEventBuffer<T, T>(data, nullptr);
+        }
+
+        template<typename T, typename U>
+        static std::vector<BYTE> GetEventBuffer(const std::vector<T>& data, U (*transform)(const T&))
+        {
             if (data.size() == 0) {
                 return std::vector<BYTE>(0);
             }
             size_t offset = 0;
+
             size_t bufferSize = data.size() * sizeof(T) + 2;
             std::vector<BYTE> buffer = std::vector<BYTE>(bufferSize);
             WriteToBuffer<UINT16>(buffer.data(), bufferSize, &offset, (UINT16)buffer.size());
-            for (T element : data)
+
+            for (const T& element : data)
             {
-                WriteToBuffer<T>(buffer.data(), bufferSize, &offset, element);
+                if (transform == nullptr)
+                {
+                    WriteToBuffer<T>(buffer.data(), bufferSize, &offset, element);
+                }
+                else
+                {
+                    U transformed = transform(element);
+                    WriteToBuffer<U>(buffer.data(), bufferSize, &offset, transformed);
+                }
             }
 
             return buffer;
