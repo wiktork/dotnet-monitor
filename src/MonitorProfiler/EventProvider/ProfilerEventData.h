@@ -13,8 +13,8 @@ class ProfilerEventData
         void WriteData(const T& data)
         {
             static_assert(Index < DataSize);
-            eventData[Index].ptr = reinterpret_cast<UINT64>(&data);
-            eventData[Index].size = sizeof(UINT64);
+            _eventData[Index].ptr = reinterpret_cast<UINT64>(&data);
+            _eventData[Index].size = sizeof(UINT64);
         }
 
         template<size_t Index>
@@ -22,8 +22,8 @@ class ProfilerEventData
         {
             static_assert(Index < DataSize);
 
-            eventData[Index].ptr = reinterpret_cast<UINT64>(data.c_str());
-            eventData[Index].size = buffer.size() * sizeof(data.size() * sizeof(WCHAR) + 2);
+            _eventData[Index].ptr = reinterpret_cast<UINT64>(data.c_str());
+            _eventData[Index].size = buffer.size() * sizeof(data.size() * sizeof(WCHAR) + 2);
         }
 
         template<size_t Index, typename T>
@@ -32,8 +32,8 @@ class ProfilerEventData
             static_assert(Index < DataSize);
             std::vector<BYTE> buffer = std::move(GetEventBuffer(data));
 
-            eventData[Index].ptr = reinterpret_cast<UINT64>(buffer.data());
-            eventData[Index].size = static_cast<UINT32>(buffer.size() * sizeof(UINT64));
+            _eventData[Index].ptr = reinterpret_cast<UINT64>(buffer.data());
+            _eventData[Index].size = static_cast<UINT32>(buffer.size() * sizeof(UINT64));
         }
         template<size_t Index, typename T, typename U>
         void WriteData(const std::vector<T>& data, U (*transform)(const T&))
@@ -41,9 +41,10 @@ class ProfilerEventData
             static_assert(Index < DataSize);
             std::vector<BYTE> buffer = std::move(GetEventBuffer(data, transform));
 
-            eventData[Index].ptr = reinterpret_cast<UINT64>(buffer.data());
-            eventData[Index].size = static_cast<UINT32>(buffer.size() * sizeof(UINT64));
+            _eventData[Index].ptr = reinterpret_cast<UINT64>(buffer.data());
+            _eventData[Index].size = static_cast<UINT32>(buffer.size() * sizeof(UINT64));
         }
+
     private:
         template<typename T>
         static std::vector<BYTE> GetEventBuffer(const std::vector<T>& data)
@@ -86,7 +87,7 @@ class ProfilerEventData
             *pOffset += sizeof(T);
         }
 
-    private:
-        COR_PRF_EVENT_DATA eventData[DataSize];
+    public:
+        COR_PRF_EVENT_DATA _eventData[DataSize];
 
 };

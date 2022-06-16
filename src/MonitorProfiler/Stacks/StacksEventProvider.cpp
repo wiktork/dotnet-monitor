@@ -77,7 +77,7 @@ HRESULT StacksEventProvider::WriteCallstack(const Stack& stack)
     profilerEventData.WriteData<1>(frames, &GetFunctionIdFromFrame);
     profilerEventData.WriteData<2>(frames, &GetOffsetFromFrame);
 
-
+    _callstackEvent->WriteEvent(profilerEventData._eventData);
 
     return S_OK;
 }
