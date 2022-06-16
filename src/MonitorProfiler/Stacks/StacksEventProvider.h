@@ -3,17 +3,21 @@
 #include "../EventProvider/ProfilerEventProvider.h"
 #include <memory>
 #include "Stack.h"
+#include "ClrData.h"
 
 class StacksEventProvider
 {
     public:
         static HRESULT CreateProvider(ICorProfilerInfo12* profilerInfo, std::unique_ptr<StacksEventProvider>& eventProvider);
-    private:
 
         HRESULT DefineEvents();
-
         HRESULT WriteCallstack(const Stack& stack);
+        HRESULT WriteClassData(ClassID classId, const ClassData& classData);
+        HRESULT WriteFunctionData(FunctionID functionId, const FunctionData& classData);
+        HRESULT WriteModuleData(ModuleID moduleId, const ModuleData& classData);
+        HRESULT WriteEndEvent();
 
+    private:
         StacksEventProvider(ICorProfilerInfo12* profilerInfo, std::unique_ptr<ProfilerEventProvider> & eventProvider) :
             _profilerInfo(profilerInfo), _provider(std::move(eventProvider))
         {

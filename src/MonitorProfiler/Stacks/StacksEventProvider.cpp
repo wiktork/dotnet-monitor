@@ -81,3 +81,53 @@ HRESULT StacksEventProvider::WriteCallstack(const Stack& stack)
 
     return S_OK;
 }
+
+HRESULT StacksEventProvider::WriteClassData(ClassID classId, const ClassData& classData)
+{
+    ProfilerEventData<5> profilerEventData;
+    HRESULT hr;
+
+    profilerEventData.WriteData<0>(classId);
+    profilerEventData.WriteData<1>(classData.GetParentClass());
+    profilerEventData.WriteData<2>(classData.GetModuleId());
+    profilerEventData.WriteData<3>(classData.GetName());
+    profilerEventData.WriteData<4>(classData.GetTypeArgs());
+
+    IfFailRet(_classIdEvent->WriteEvent(profilerEventData._eventData));
+
+    return S_OK;
+}
+
+HRESULT StacksEventProvider::WriteFunctionData(FunctionID functionId, const FunctionData& functionData)
+{
+    ProfilerEventData<5> profilerEventData;
+    HRESULT hr;
+
+    profilerEventData.WriteData<0>(functionId);
+    profilerEventData.WriteData<1>(functionData.GetClass());
+    profilerEventData.WriteData<2>(functionData.GetModuleId());
+    profilerEventData.WriteData<3>(functionData.GetName());
+    profilerEventData.WriteData<4>(functionData.GetTypeArgs());
+
+    IfFailRet(_functionIdEvent->WriteEvent(profilerEventData._eventData));
+
+    return S_OK;
+}
+
+HRESULT StacksEventProvider::WriteModuleData(ModuleID moduleId, const ModuleData& moduleData)
+{
+    ProfilerEventData<2> profilerEventData;
+    HRESULT hr;
+
+    profilerEventData.WriteData<0>(moduleId);
+    profilerEventData.WriteData<1>(moduleData.GetName());
+
+    IfFailRet(_moduleEvent->WriteEvent(profilerEventData._eventData));
+
+    return S_OK;
+}
+
+HRESULT StacksEventProvider::WriteEndEvent()
+{
+    return _endEvent->WriteEvent();
+}

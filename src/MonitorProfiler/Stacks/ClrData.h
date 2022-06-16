@@ -13,7 +13,7 @@ public:
     {
     }
 
-    const tstring& GetModuleName() const { return _moduleName; }
+    const tstring& GetName() const { return _moduleName; }
 
 private:
     tstring _moduleName;
@@ -27,15 +27,17 @@ public:
     {
     }
 
-    ModuleID GetModuleId() const { return _moduleId; }
+    const ModuleID& GetModuleId() const { return _moduleId; }
     const tstring& GetName() const { return _className; }
-    ClassID GetParentClass() const { return _parentClass; }
+    const ClassID& GetParentClass() const { return _parentClass; }
+    const std::vector<ClassID>& GetTypeArgs() const { return _typeArgs; }
+    void AddTypeArg(ClassID id) { _typeArgs.push_back(id); }
 
 private:
-    tstring _className;
-    ClassID _parentClass = 0x0;
-    std::vector<ClassID> _typeArgs;
     ModuleID _moduleId;
+    ClassID _parentClass = 0x0;
+    tstring _className;
+    std::vector<ClassID> _typeArgs;
 };
 
 class FunctionData
@@ -46,13 +48,15 @@ public:
     {
     }
 
-    ModuleID GetModuleId() const { return _moduleId; }
+    const ModuleID& GetModuleId() const { return _moduleId; }
     const tstring& GetName() const { return _functionName; }
-    ClassID GetClass() const { return _class; }
+    const ClassID& GetClass() const { return _class; }
+    const std::vector<ClassID>& GetTypeArgs() const { return _typeArgs; }
+    void AddTypeArg(ClassID classID) { _typeArgs.push_back(classID); }
 
 private:
-    tstring _functionName;
-    ClassID _class;
     ModuleID _moduleId;
+    ClassID _class;
+    tstring _functionName;
     std::vector<ClassID> _typeArgs;
 };

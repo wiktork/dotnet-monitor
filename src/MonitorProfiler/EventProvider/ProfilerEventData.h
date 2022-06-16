@@ -23,7 +23,7 @@ class ProfilerEventData
             static_assert(Index < DataSize);
 
             _eventData[Index].ptr = reinterpret_cast<UINT64>(data.c_str());
-            _eventData[Index].size = buffer.size() * sizeof(data.size() * sizeof(WCHAR) + 2);
+            _eventData[Index].size = static_cast<UINT32>(data.size()) * sizeof(WCHAR) + 2;
         }
 
         template<size_t Index, typename T>
