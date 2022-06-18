@@ -23,6 +23,7 @@ class Stack
 {
 public:
     uint64_t GetThreadId() const { return _tid; }
+    void SetThreadId(uint64_t threadid) { _tid = threadid; }
     const std::vector<StackFrame>& GetFrames() const { return _frames; }
 
     void AddFrame(StackFrame&& frame)
