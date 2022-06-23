@@ -25,6 +25,7 @@ HRESULT StackSampler::CreateCallstack()
         stack.SetThreadId(static_cast<uint64_t>(threadID));
             //Need to block ThreadDestroyed while stack walking!!! Is this still a  requirement?
         hr = _profilerInfo->DoStackSnapshot(threadID, nullptr, COR_PRF_SNAPSHOT_REGISTER_CONTEXT, &stackState, nullptr, 0);
+
     }
 
     return S_OK;
@@ -36,6 +37,7 @@ HRESULT __stdcall StackSampler::DoStackSnapshotStackSnapShotCallbackWrapper(Func
     Stack& stack = state->GetStack();
     stack.AddFrame(StackFrame(funcId, ip));
 
+    
 
     return S_OK;
 }

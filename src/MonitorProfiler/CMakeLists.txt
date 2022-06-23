@@ -26,6 +26,7 @@ set(SOURCES
     MainProfiler/ThreadDataManager.cpp
     Stacks/StacksEventProvider.cpp
     Stacks/StackSampler.cpp
+    Utilities/TypeNameUtilities.cpp
     ClassFactory.cpp
     DllMain.cpp
     ProfilerBase.cpp

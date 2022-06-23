@@ -3,7 +3,7 @@
 #include "../EventProvider/ProfilerEventProvider.h"
 #include <memory>
 #include "Stack.h"
-#include "ClrData.h"
+#include "../Utilities/ClrData.h"
 
 class StacksEventProvider
 {

@@ -3,6 +3,7 @@
 #include <memory>
 #include <functional>
 #include <unordered_map>
+#include <vector>
 #include "cor.h"
 #include "corprof.h"
 #include "tstring.h"
@@ -32,9 +33,9 @@ public:
     void AddFunctionData(ModuleID moduleId, FunctionID id, tstring&& name, ClassID parent, ClassID* typeArgs, int typeArgsCount)
     {
         std::shared_ptr<FunctionData> functionData = std::make_shared<FunctionData>(moduleId, parent, std::move(name));
-        if (typeArgs && typeArgsCount > 0)
+        for (int i = 0; i < typeArgsCount; i++)
         {
-            functionData->TypeArgs.assign(typeArgs, typeArgs + typeArgsCount);
+            functionData->AddTypeArg(typeArgs[i]);
         }
         _functionNames.emplace(id, functionData);
     }
@@ -42,9 +43,9 @@ public:
     void AddClassData(ModuleID moduleId, ClassID id, tstring&& name, ClassID parent, ClassID* typeArgs, int typeArgsCount)
     {
         std::shared_ptr<ClassData> classData = std::make_shared<ClassData>(moduleId, parent, std::move(name));
-        if (typeArgs && typeArgsCount > 0)
+        for (int i = 0; i < typeArgsCount; i++)
         {
-            classData->TypeArgs.assign(typeArgs, typeArgs + typeArgsCount);
+            classData->AddTypeArg(typeArgs[i]);
         }
         _classNames.emplace(id, classData);
     }
