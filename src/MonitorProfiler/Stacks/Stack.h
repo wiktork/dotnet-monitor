@@ -26,9 +26,9 @@ public:
     void SetThreadId(uint64_t threadid) { _tid = threadid; }
     const std::vector<StackFrame>& GetFrames() const { return _frames; }
 
-    void AddFrame(StackFrame&& frame)
+    void AddFrame(const StackFrame& frame)
     {
-        _frames.emplace_back(std::move(frame));
+        _frames.emplace_back(frame);
     }
 private:
     uint64_t _tid = 0;
