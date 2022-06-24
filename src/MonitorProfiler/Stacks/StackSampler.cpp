@@ -3,6 +3,7 @@
 #include "Stack.h"
 #include <functional>
 #include <memory>
+#include "../Utilities/TypeNameUtilities.h"
 
 HRESULT StackSampler::CreateCallstack()
 {
@@ -24,7 +25,7 @@ HRESULT StackSampler::CreateCallstack()
         Stack& stack = stackState.GetStack();
         stack.SetThreadId(static_cast<uint64_t>(threadID));
             //Need to block ThreadDestroyed while stack walking!!! Is this still a  requirement?
-        hr = _profilerInfo->DoStackSnapshot(threadID, nullptr, COR_PRF_SNAPSHOT_REGISTER_CONTEXT, &stackState, nullptr, 0);
+        hr = _profilerInfo->DoStackSnapshot(threadID, DoStackSnapshotStackSnapShotCallbackWrapper, COR_PRF_SNAPSHOT_REGISTER_CONTEXT, &stackState, nullptr, 0);
 
     }
 
@@ -33,11 +34,17 @@ HRESULT StackSampler::CreateCallstack()
 
 HRESULT __stdcall StackSampler::DoStackSnapshotStackSnapShotCallbackWrapper(FunctionID funcId, UINT_PTR ip, COR_PRF_FRAME_INFO frameInfo, ULONG32 contextSize, BYTE context[], void* clientData)
 {
+    HRESULT hr;
+
     StackSamplerState* state = static_cast<StackSamplerState*>(clientData);
     Stack& stack = state->GetStack();
     stack.AddFrame(StackFrame(funcId, ip));
 
-    
+    NameCache& nameCache = state->GetNameCache();
+    TypeNameUtilities nameUtilities(state->GetProfilerInfo());
+    IfFailRet(nameUtilities.CacheNames(funcId, frameInfo, nameCache));
 
+    tstring fullyQualifiedName = nameCache.GetFullyQualifiedName(funcId);
+    
     return S_OK;
 }

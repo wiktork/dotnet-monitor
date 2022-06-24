@@ -4,12 +4,10 @@
 HRESULT TypeNameUtilities::CacheNames(FunctionID functionId, COR_PRF_FRAME_INFO frameInfo, NameCache& nameCache)
 {
     std::shared_ptr<FunctionData> functionData;
-    if (nameCache.GetFunctionData(functionId, functionData))
+    if (!nameCache.GetFunctionData(functionId, functionData))
     {
-        return S_OK;
+        return GetFunctionInfo(nameCache, functionId, frameInfo);
     }
-
-
 
     return S_OK;
 }
@@ -180,7 +178,7 @@ HRESULT TypeNameUtilities::GetModuleInfo(NameCache& nameCache, ModuleID moduleId
         moduleFullName,
         &assemID));
 
-    WCHAR* ptr = NULL;
+    WCHAR* ptr = nullptr;
     WCHAR* index = moduleFullName;
     // Find the last occurence of the \ character
     while (*index != 0)

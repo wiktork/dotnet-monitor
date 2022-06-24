@@ -8,7 +8,6 @@
 #include "corprof.h"
 #include "tstring.h"
 #include "ClrData.h"
-
 class NameCache
 {
 public:
@@ -28,6 +27,49 @@ public:
     void AddModuleData(ModuleID moduleId, tstring&& name)
     {
         _moduleNames.emplace(moduleId, std::make_shared<ModuleData>(std::move(name)));
+    }
+
+    tstring GetFullyQualifiedName(FunctionID id)
+    {
+        tstring name;
+
+        //TODO Missing generic parameters for methods and types
+
+        std::shared_ptr<FunctionData> functionData;
+        if (GetFunctionData(id, functionData))
+        {
+            std::shared_ptr<ModuleData> moduleData;
+            if (GetModuleData(functionData->GetModuleId(), moduleData))
+            {
+                name = moduleData->GetName() + _T("::");
+            }
+            std::shared_ptr<ClassData> classData;
+            name += GetFullyQualifiedClassName(functionData->GetClass());
+            name += _T(".") + functionData->GetName();
+        }
+
+        return name;
+    }
+
+    tstring GetFullyQualifiedClassName(ClassID classId)
+    {
+        tstring name;
+        std::shared_ptr<ClassData> classData;
+
+        bool nested = false;
+
+        while (GetClassData(classId, classData))
+        {
+            name = name + classData->GetName();
+            if (nested)
+            {
+                name += _T("+");
+            }
+            nested = true;
+            classId = classData->GetParentClass();
+        }
+
+        return name;
     }
 
     void AddFunctionData(ModuleID moduleId, FunctionID id, tstring&& name, ClassID parent, ClassID* typeArgs, int typeArgsCount)

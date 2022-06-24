@@ -11,6 +11,8 @@
 #include "macros.h"
 #include <memory>
 
+#include "../Stacks/StackSampler.h"
+
 using namespace std;
 
 #define IfFailLogRet(EXPR) IfFailLogRet_(m_pLogger, EXPR)
@@ -49,7 +51,7 @@ STDMETHODIMP MainProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
     // communication channel's GetProcessEnvironment command to get this value.
     IfFailLogRet(_environmentHelper->SetProductVersion());
 
-    DWORD eventsLow = COR_PRF_MONITOR::COR_PRF_MONITOR_NONE;
+    DWORD eventsLow = COR_PRF_MONITOR::COR_PRF_MONITOR_NONE | COR_PRF_MONITOR::COR_PRF_ENABLE_STACK_SNAPSHOT;
     ThreadDataManager::AddProfilerEventMask(eventsLow);
     _exceptionTracker->AddProfilerEventMask(eventsLow);
 
@@ -201,5 +203,10 @@ HRESULT MainProfiler::InitializeCommandServer()
 HRESULT MainProfiler::MessageCallback(const IpcMessage& message)
 {
     m_pLogger->Log(LogLevel::Information, _T("Message received from client: %d %d"), message.MessageType, message.Parameters);
+    HRESULT hr;
+
+    StackSampler stackSampler(m_pCorProfilerInfo);
+    IfFailRet(stackSampler.CreateCallstack());
+    
     return S_OK;
 }
