@@ -208,21 +208,23 @@ HRESULT MainProfiler::MessageCallback(const IpcMessage& message)
 
     StackSampler stackSampler(m_pCorProfilerInfo);
     std::vector<std::unique_ptr<StackSamplerState>> stackStates;
-    IfFailRet(stackSampler.CreateCallstack(stackStates));
+    std::shared_ptr<NameCache> nameCache;
+    
+    IfFailRet(stackSampler.CreateCallstack(stackStates, nameCache));
 
     std::unique_ptr<StacksEventProvider> eventProvider;
     IfFailRet(StacksEventProvider::CreateProvider(m_pCorProfilerInfo, eventProvider));
 
-    for (int i = 0; i < )
+    nameCache->ForFunctionId(std::bind(&StacksEventProvider::WriteFunctionData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
+    nameCache->ForClassId(std::bind(&StacksEventProvider::WriteClassData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
+    nameCache->ForModuleId(std::bind(&StacksEventProvider::WriteModuleData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
 
-    NameCache& nameCache = stackState->GetNameCache();
-    nameCache.ForFunctionId(std::bind(&StacksEventProvider::WriteFunctionData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
+    for (std::unique_ptr<StackSamplerState>& stackState : stackStates)
+    {
+        IfFailRet(eventProvider->WriteCallstack(stackState->GetStack()));
+    }
 
-    nameCache.ForClassId(std::bind(&StacksEventProvider::WriteClassData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
-
-    nameCache.ForModuleId(std::bind(&StacksEventProvider::WriteModuleData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
-
-    eventProvider->WriteCallstack(stackState->GetStack());
+    IfFailRet(eventProvider->WriteEndEvent());
 
     return S_OK;
 }

@@ -5,7 +5,7 @@
 #include <memory>
 #include "../Utilities/TypeNameUtilities.h"
 
-HRESULT StackSampler::CreateCallstack(std::vector<std::unique_ptr<StackSamplerState>>& stackStates)
+HRESULT StackSampler::CreateCallstack(std::vector<std::unique_ptr<StackSamplerState>>& stackStates, std::shared_ptr<NameCache>& nameCache)
 {
     HRESULT hr;
 
@@ -19,15 +19,19 @@ HRESULT StackSampler::CreateCallstack(std::vector<std::unique_ptr<StackSamplerSt
     ThreadID threadID;
     ULONG numReturned;
 
+    if (nameCache == nullptr)
+    {
+        nameCache = std::make_shared<NameCache>();
+    }
+
     while ((hr = threadEnum->Next(1, &threadID, &numReturned)) == S_OK)
     {
-        std::unique_ptr<StackSamplerState> stackState = std::unique_ptr<StackSamplerState>(new StackSamplerState(_profilerInfo));
-        Stack& stack = stackState->CreateStack(threadID);
+        std::unique_ptr<StackSamplerState> stackState = std::unique_ptr<StackSamplerState>(new StackSamplerState(_profilerInfo, nameCache));
+        
             //Need to block ThreadDestroyed while stack walking!!! Is this still a  requirement?
         hr = _profilerInfo->DoStackSnapshot(threadID, DoStackSnapshotStackSnapShotCallbackWrapper, COR_PRF_SNAPSHOT_REGISTER_CONTEXT, &stackState, nullptr, 0);
 
-        stackStates.push_back(stackState);
-
+        stackStates.push_back(std::move(stackState));
     }
 
     return S_OK;
@@ -41,11 +45,11 @@ HRESULT __stdcall StackSampler::DoStackSnapshotStackSnapShotCallbackWrapper(Func
     Stack& stack = state->GetStack();
     stack.AddFrame(StackFrame(funcId, ip));
 
-    NameCache& nameCache = state->GetNameCache();
+    std::shared_ptr<NameCache> nameCache = state->GetNameCache();
     TypeNameUtilities nameUtilities(state->GetProfilerInfo());
-    IfFailRet(nameUtilities.CacheNames(funcId, frameInfo, nameCache));
+    IfFailRet(nameUtilities.CacheNames(funcId, frameInfo, *nameCache));
 
-    tstring fullyQualifiedName = nameCache.GetFullyQualifiedName(funcId);
+    tstring fullyQualifiedName = nameCache->GetFullyQualifiedName(funcId);
     
     return S_OK;
 }
