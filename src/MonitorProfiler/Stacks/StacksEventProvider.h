@@ -10,7 +10,6 @@ class StacksEventProvider
     public:
         static HRESULT CreateProvider(ICorProfilerInfo12* profilerInfo, std::unique_ptr<StacksEventProvider>& eventProvider);
 
-        HRESULT DefineEvents();
         HRESULT WriteCallstack(const Stack& stack);
         HRESULT WriteClassData(ClassID classId, const ClassData& classData);
         HRESULT WriteFunctionData(FunctionID functionId, const FunctionData& classData);
@@ -22,6 +21,8 @@ class StacksEventProvider
             _profilerInfo(profilerInfo), _provider(std::move(eventProvider))
         {
         }
+
+        HRESULT DefineEvents();
 
         ComPtr<ICorProfilerInfo12> _profilerInfo;
         std::unique_ptr<ProfilerEventProvider> _provider;

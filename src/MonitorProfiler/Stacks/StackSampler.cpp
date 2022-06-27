@@ -5,10 +5,9 @@
 #include <memory>
 #include "../Utilities/TypeNameUtilities.h"
 
-HRESULT StackSampler::CreateCallstack()
+HRESULT StackSampler::CreateCallstack(std::vector<std::unique_ptr<StackSamplerState>>& stackStates)
 {
     HRESULT hr;
-
 
     IfFailRet(_profilerInfo->SuspendRuntime());
     auto resumeRuntime = [](ICorProfilerInfo12* profilerInfo) { profilerInfo->ResumeRuntime(); };
@@ -19,13 +18,15 @@ HRESULT StackSampler::CreateCallstack()
 
     ThreadID threadID;
     ULONG numReturned;
+
     while ((hr = threadEnum->Next(1, &threadID, &numReturned)) == S_OK)
     {
-        StackSamplerState stackState(_profilerInfo);
-        Stack& stack = stackState.GetStack();
-        stack.SetThreadId(static_cast<uint64_t>(threadID));
+        std::unique_ptr<StackSamplerState> stackState = std::unique_ptr<StackSamplerState>(new StackSamplerState(_profilerInfo));
+        Stack& stack = stackState->CreateStack(threadID);
             //Need to block ThreadDestroyed while stack walking!!! Is this still a  requirement?
         hr = _profilerInfo->DoStackSnapshot(threadID, DoStackSnapshotStackSnapShotCallbackWrapper, COR_PRF_SNAPSHOT_REGISTER_CONTEXT, &stackState, nullptr, 0);
+
+        stackStates.push_back(stackState);
 
     }
 

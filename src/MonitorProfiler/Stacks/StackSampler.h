@@ -12,12 +12,13 @@ class StackSamplerState
 {
     public:
         StackSamplerState(ICorProfilerInfo12* profilerInfo) : _profilerInfo(profilerInfo) {}
-        Stack& GetStack() { return _stack; }
+        Stack& CreateStack(uint64_t threadId) { _stacks[threadId].SetThreadId(threadId); return _stacks[threadId]; }
         NameCache& GetNameCache() { return _nameCache; }
         ICorProfilerInfo12* GetProfilerInfo() { return _profilerInfo; }
+        std::unordered_map<uint64_t, Stack>& GetStacks() { return _stacks; }
     private:
         ComPtr<ICorProfilerInfo12> _profilerInfo;
-        Stack _stack;
+        std::unordered_map<uint64_t, Stack> _stacks;
         NameCache _nameCache;
 };
 
@@ -25,7 +26,7 @@ class StackSampler
 {
     public:
         StackSampler(ICorProfilerInfo12* profilerInfo) : _profilerInfo(profilerInfo) {}
-        HRESULT CreateCallstack();
+        HRESULT CreateCallstack(std::vector<std::unique_ptr<StackSamplerState>>& stackStates);
     private:
         static HRESULT __stdcall DoStackSnapshotStackSnapShotCallbackWrapper(
             FunctionID funcId,

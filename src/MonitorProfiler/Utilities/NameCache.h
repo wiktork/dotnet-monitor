@@ -92,22 +92,22 @@ public:
         _classNames.emplace(id, classData);
     }
 
-    void ForFunctionId(std::function<void(FunctionID, const FunctionData&)> f) {
+    void ForFunctionId(std::function<HRESULT (FunctionID, const FunctionData&)> f) {
         ExecuteOver(_functionNames, f);
     }
 
-    void ForClassId(std::function<void(ClassID, const ClassData&)> f) {
+    void ForClassId(std::function<HRESULT(ClassID, const ClassData&)> f) {
         ExecuteOver(_classNames, f);
     }
 
-    void ForModuleId(std::function<void(ModuleID, const ModuleData&)> f) {
+    void ForModuleId(std::function<HRESULT(ModuleID, const ModuleData&)> f) {
         ExecuteOver(_moduleNames, f);
     }
 
 
 private:
     template<typename T, typename U>
-    void ExecuteOver(std::unordered_map<T, std::shared_ptr<U>> map, std::function<void(T, const U&)> f) {
+    void ExecuteOver(std::unordered_map<T, std::shared_ptr<U>> map, std::function<HRESULT(T, const U&)> f) {
         for (auto& value : map)
         {
             f(value.first, *value.second);

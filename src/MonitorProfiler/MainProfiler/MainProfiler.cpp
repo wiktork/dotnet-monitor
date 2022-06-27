@@ -7,6 +7,7 @@
 #include "../Environment/ProfilerEnvironment.h"
 #include "../Logging/AggregateLogger.h"
 #include "../Logging/DebugLogger.h"
+#include "../Stacks/StacksEventProvider.h"
 #include "corhlpr.h"
 #include "macros.h"
 #include <memory>
@@ -192,7 +193,7 @@ HRESULT MainProfiler::InitializeCommandServer()
     tstring tmpDir;
     IfFailRet(_environmentHelper->GetTempFolder(tmpDir));
 
-    _commandServer = std::unique_ptr<CommandServer>(new CommandServer(m_pLogger));
+    _commandServer = std::unique_ptr<CommandServer>(new CommandServer(m_pLogger, m_pCorProfilerInfo));
     tstring socketPath = tmpDir + separator + instanceId + _T(".sock");
 
     IfFailRet(_commandServer->Start(to_string(socketPath), [this](const IpcMessage& message)-> HRESULT { return this->MessageCallback(message); }));
@@ -206,7 +207,22 @@ HRESULT MainProfiler::MessageCallback(const IpcMessage& message)
     HRESULT hr;
 
     StackSampler stackSampler(m_pCorProfilerInfo);
-    IfFailRet(stackSampler.CreateCallstack());
-    
+    std::vector<std::unique_ptr<StackSamplerState>> stackStates;
+    IfFailRet(stackSampler.CreateCallstack(stackStates));
+
+    std::unique_ptr<StacksEventProvider> eventProvider;
+    IfFailRet(StacksEventProvider::CreateProvider(m_pCorProfilerInfo, eventProvider));
+
+    for (int i = 0; i < )
+
+    NameCache& nameCache = stackState->GetNameCache();
+    nameCache.ForFunctionId(std::bind(&StacksEventProvider::WriteFunctionData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
+
+    nameCache.ForClassId(std::bind(&StacksEventProvider::WriteClassData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
+
+    nameCache.ForModuleId(std::bind(&StacksEventProvider::WriteModuleData, eventProvider.get(), std::placeholders::_1, std::placeholders::_2));
+
+    eventProvider->WriteCallstack(stackState->GetStack());
+
     return S_OK;
 }

@@ -53,6 +53,8 @@ HRESULT StacksEventProvider::CreateProvider(ICorProfilerInfo12* profilerInfo, st
 
     eventProvider = std::unique_ptr<StacksEventProvider>(new StacksEventProvider(profilerInfo, provider));
 
+    IfFailRet(eventProvider->DefineEvents());
+
     return S_OK;
 }
 
