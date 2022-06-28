@@ -27,13 +27,13 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
         {
             return new EventPipeProviderSourceConfiguration(requestRundown: false, bufferSizeInMB: 256, new[]
             {
-                new EventPipeProvider("MySuperAwesomeEventPipeProvider", System.Diagnostics.Tracing.EventLevel.LogAlways)
+                new EventPipeProvider("DotnetMonitorStacksEventProvider", System.Diagnostics.Tracing.EventLevel.LogAlways)
             });
         }
 
         protected override Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
-           eventSource.Dynamic.AddCallbackForProviderEvents((string provider, string _) => provider == "MySuperAwesomeEventPipeProvider" ?
+           eventSource.Dynamic.AddCallbackForProviderEvents((string provider, string _) => provider == "DotnetMonitorStacksEventProvider" ?
            EventFilterResponse.AcceptEvent : EventFilterResponse.RejectProvider, Callback);
 
            return base.OnEventSourceAvailable(eventSource, stopSessionAsync, token);

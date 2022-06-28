@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Dia2Lib;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -556,18 +557,20 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
         {
             ProcessKey? processKey = GetProcessKey(pid, uid, name);
 
-            System.Net.Sockets.UnixDomainSocketEndPoint ep =
-                new System.Net.Sockets.UnixDomainSocketEndPoint(Environment.ExpandEnvironmentVariables(@"%TEMP%\sampler.sock"));
-
-            using System.Net.Sockets.Socket s =
-                new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.Unix, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Unspecified);
-
-#if NET6_0_OR_GREATER
-            await s.ConnectAsync(ep);
-#endif
             return await InvokeForProcess(async processInfo =>
             {
+                using IDisposable operationRegistration = _operationTrackerService.Register(processInfo.EndpointInfo);
 
+                var ep = new System.Net.Sockets.UnixDomainSocketEndPoint(Environment.ExpandEnvironmentVariables(@$"%TEMP%\{processInfo.EndpointInfo.RuntimeInstanceCookie:D}.sock"));
+                var s = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.Unix, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Unspecified);
+
+#if NET6_0_OR_GREATER
+                await s.ConnectAsync(ep);
+
+                byte[] buffer = new byte[6];
+                await s.SendAsync(new ReadOnlyMemory<byte>(buffer), System.Net.Sockets.SocketFlags.None, this.HttpContext.RequestAborted);
+                s.Dispose();
+#endif
                 var settings = new EventStacksPipelineSettings
                 {
                     Duration = TimeSpan.FromMilliseconds(10)

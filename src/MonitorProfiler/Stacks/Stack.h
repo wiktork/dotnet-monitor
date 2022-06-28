@@ -28,7 +28,7 @@ public:
 
     void AddFrame(const StackFrame& frame)
     {
-        _frames.emplace_back(frame);
+        _frames.push_back(frame);
     }
 private:
     uint64_t _tid = 0;

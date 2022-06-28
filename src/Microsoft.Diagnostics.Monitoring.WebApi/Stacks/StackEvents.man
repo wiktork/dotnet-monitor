@@ -1,7 +1,7 @@
 ﻿<instrumentationManifest xmlns="http://schemas.microsoft.com/win/2004/08/events">
   <instrumentation xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:win="http://manifests.microsoft.com/win/2004/08/windows/events">
     <events xmlns="http://schemas.microsoft.com/win/2004/08/events">
-      <provider name="MySuperAwesomeEventPipeProvider" guid="{AFF081FE-0247-4275-9C4E-021F3DC1DA35}">
+      <provider name="DotnetMonitorStacksEventProvider" guid="{AFF081FE-0247-4275-9C4E-021F3DC1DA35}">
         <tasks>
           <task name="DotnetMonitorStacks" value="1" eventGUID="{06A01367-79D3-4594-8EB3-C721603C4679}" />
         </tasks>
