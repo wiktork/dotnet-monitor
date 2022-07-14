@@ -2,13 +2,21 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Dia2Lib;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Monitoring.Options;
+using Microsoft.Diagnostics.Monitoring.WebApi.Stacks;
 using Microsoft.Diagnostics.Monitoring.WebApi.Validation;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Symbols;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Analysis;
+using Microsoft.Diagnostics.Tracing.Etlx;
+using Microsoft.Diagnostics.Tracing.Parsers.ClrPrivate;
+using Microsoft.Diagnostics.Tracing.Stacks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,6 +24,7 @@ using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -527,6 +536,273 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
                 _logger.WrittenToHttpStream();
                 return new ActionResult<Models.DotnetMonitorInfo>(dotnetMonitorInfo);
             }, _logger);
+        }
+
+        [HttpGet("stacks", Name = nameof(CaptureStacks))]
+        [ProducesWithProblemDetails(ContentTypes.ApplicationNdJson, ContentTypes.ApplicationJson, ContentTypes.TextPlain)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status202Accepted)]
+        [RequestLimit(LimitKey = Utilities.ArtifactType_Stacks)]
+        [EgressValidation]
+        public async Task<ActionResult> CaptureStacks(
+            [FromQuery]
+            int? pid = null,
+            [FromQuery]
+            Guid? uid = null,
+            [FromQuery]
+            string name = null,
+            [FromQuery][Range(-1, int.MaxValue)]
+            int durationSeconds = 5,
+            [FromQuery]
+            string egressProvider = null)
+        {
+            ProcessKey? processKey = GetProcessKey(pid, uid, name);
+
+            return await InvokeForProcess(async processInfo =>
+            {
+                using IDisposable operationRegistration = _operationTrackerService.Register(processInfo.EndpointInfo);
+
+                var settings = new EventStacksPipelineSettings
+                {
+                    Duration = TimeSpan.FromMilliseconds(100000000)
+                };
+                await using var eventTracePipeline = new EventStacksPipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
+                settings);
+
+                Debug.WriteLine("!Before RunAsync");
+
+                var runPipelineTask =  eventTracePipeline.RunAsync(HttpContext.RequestAborted);
+
+                Debug.WriteLine("!After RunAsync");
+
+
+                var ep = new System.Net.Sockets.UnixDomainSocketEndPoint(Environment.ExpandEnvironmentVariables(@$"%TEMP%\{processInfo.EndpointInfo.RuntimeInstanceCookie:D}.sock"));
+                var s = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.Unix, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Unspecified);
+
+#if NET6_0
+                await s.ConnectAsync(ep);
+
+                byte[] buffer = new byte[6];
+                MemoryStream m = new MemoryStream(buffer);
+                BinaryWriter w = new BinaryWriter(m);
+                w.Write((short)2);
+                w.Dispose();
+                
+                await s.SendAsync(new ReadOnlyMemory<byte>(buffer), System.Net.Sockets.SocketFlags.None, this.HttpContext.RequestAborted);
+                await s.ReceiveAsync(new Memory<byte>(buffer), System.Net.Sockets.SocketFlags.None, HttpContext.RequestAborted);
+                s.Dispose();
+
+                Debug.WriteLine("!After message roundtrip");
+
+#endif
+
+                Debug.WriteLine("!Before Pipeline await");
+
+                await runPipelineTask;
+                Debug.WriteLine("!After Pipeline await");
+
+
+
+                //TODO Convert to a realtime consumption with no interim artifact
+
+
+                return await Result(Utilities.ArtifactType_Stacks, egressProvider, async (stream, token) =>
+                {
+                    Debug.WriteLine("!Before Await result");
+
+
+                    var result = await eventTracePipeline.Result;
+
+                    Debug.WriteLine("!After await result");
+
+
+                    using StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+                    foreach(var stack in result.Stacks)
+                    {
+                        await writer.WriteLineAsync($"ThreadID: {stack.ThreadId}");
+                        foreach(var frame in stack.Frames)
+                        {
+                            string className = "UnknownClass";
+                            string functionName = "UnknownFunction";
+                            string moduleName = "UnknownModule";
+                            string parentClassName = string.Empty;
+                            if (result.NameCache.FunctionData.TryGetValue(frame.FunctionId, out FunctionData functionData))
+                            {
+                                functionName = functionData.Name;
+                                if (functionData.TypeArgs?.Length > 0)
+                                {
+                                    functionName += $"<{functionData.TypeArgs.Select(id => GetClassName(result.NameCache, 0, id, 0)).Aggregate((a, b) => a + "," + b)}>";
+                                }
+                                if (result.NameCache.ModuleData.TryGetValue(functionData.ModuleId, out ModuleData moduleData))
+                                {
+                                    moduleName = moduleData.Name;
+                                }
+                                className = GetClassName(result.NameCache, functionData.ModuleId, functionData.ParentClass, functionData.ParentToken);
+                            }
+                            await writer.WriteLineAsync($"    [{moduleName}]{parentClassName}{className}.{functionName}");
+                        }
+                    };
+
+                }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
+
+            }, processKey, Utilities.ArtifactType_Stacks);
+        }
+
+        private string GetClassName(NameCache cache, ulong moduleId, ulong classId, ulong token)
+        {
+            string name = "Unknown";
+            if (cache.ClassData.TryGetValue(classId, out ClassData classData))
+            {
+                if (cache.TokenData.TryGetValue((classData.ModuleId, classData.Token), out TokenData value))
+                {
+                    name = value.Name;
+
+                    ulong tokenToProcess = value.OuterToken;
+                    while (tokenToProcess != 0)
+                    {
+                        if (cache.TokenData.TryGetValue((classData.ModuleId, tokenToProcess), out TokenData outerTokenData))
+                        {
+                            name = outerTokenData.Name + "+" + name;
+                            tokenToProcess = outerTokenData.OuterToken;
+                        }
+                        else
+                        {
+                            tokenToProcess = 0;
+                        }
+                    }
+                }
+                if (classData.TypeArgs.Length > 0)
+                {
+                    name = $"<{classData.TypeArgs.Select(id => GetClassName(cache, 0, id, 0)).Aggregate((a, b) => a + "," + b)}>";
+                }
+            }
+            else
+            {
+                name = String.Empty;
+                ulong tokenToProcess = token;
+                while (tokenToProcess != 0)
+                {
+                    if (cache.TokenData.TryGetValue((moduleId, tokenToProcess), out TokenData outerTokenData))
+                    {
+                        name = outerTokenData.Name + "+" + name;
+                        tokenToProcess = outerTokenData.OuterToken;
+                    }
+                    else
+                    {
+                        tokenToProcess = 0;
+                    }
+                }
+            }
+            return name;
+        }
+
+        private Task<ActionResult> UseRundown(int pid, Guid uid, string name, string egressProvider)
+        {
+            ProcessKey? processKey = GetProcessKey(pid, uid, name);
+
+            return InvokeForProcess(async processInfo =>
+            {
+                var configuration = new EventPipeProviderSourceConfiguration(
+                    requestRundown: true,
+                    providers: new EventPipeProvider(MonitoringSourceConfiguration.SampleProfilerProviderName,
+                                                     System.Diagnostics.Tracing.EventLevel.Informational));
+
+                EventTracePipelineSettings settings = new EventTracePipelineSettings
+                {
+                    Configuration = configuration,
+                    Duration = TimeSpan.FromMilliseconds(10)
+                };
+
+                string tmpFile = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), ".nettrace");
+                using (FileStream file = new FileStream(tmpFile, FileMode.CreateNew))
+                {
+                    await using EventTracePipeline eventTracePipeline = new EventTracePipeline(new DiagnosticsClient(processInfo.EndpointInfo.Endpoint),
+                    settings, async (Stream stream, CancellationToken token) =>
+                    {
+                        await stream.CopyToAsync(file, 0x1000, HttpContext.RequestAborted);
+                    });
+                    await eventTracePipeline.RunAsync(HttpContext.RequestAborted);
+                }
+
+                var traceLog = Microsoft.Diagnostics.Tracing.Etlx.TraceLog.CreateFromEventTraceLogFile(tmpFile);
+
+                return await Result(Utilities.ArtifactType_Stacks, egressProvider, async (stream, token) =>
+                {
+                    await SerializeStack(stream, traceLog);
+                }, "test.stacks", ContentTypes.TextPlain, processInfo.EndpointInfo, asAttachment: false);
+            }, processKey, Utilities.ArtifactType_Stacks);
+        }
+
+        public async Task SerializeStack(Stream stream, string tempEtlxFilename)
+        {
+            try
+            {
+                using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null))
+                using (var eventLog = new Tracing.Etlx.TraceLog(tempEtlxFilename))
+                using (StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.UTF8, 4096, leaveOpen: true))
+                {
+                    var stackSource = new MutableTraceEventStackSource(eventLog)
+                    {
+                        OnlyManagedCodeStacks = true
+                    };
+
+                    var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
+                    computer.GenerateThreadTimeStacks(stackSource);
+
+                    var samplesForThread = new Dictionary<int, List<StackSourceSample>>();
+
+                    stackSource.ForEach((sample) =>
+                    {
+                        var stackIndex = sample.StackIndex;
+                        while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
+                            stackIndex = stackSource.GetCallerIndex(stackIndex);
+
+                        // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
+                        // Thread id is in the frame name as "Thread (<ID>)"
+                        string template = "Thread (";
+                        string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
+                        int threadId = int.Parse(threadFrame.Substring(template.Length, threadFrame.Length - (template.Length + 1)));
+
+                        if (samplesForThread.TryGetValue(threadId, out var samples))
+                        {
+                            samples.Add(sample);
+                        }
+                        else
+                        {
+                            samplesForThread[threadId] = new List<StackSourceSample>() { sample };
+                        }
+                    });
+
+                    // For every thread recorded in our trace, print the first stack
+                    foreach (var (threadId, samples) in samplesForThread)
+                    {
+                        await PrintStack(writer, threadId, samples[0], stackSource);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+            }
+            finally
+            {
+            }
+        }
+
+        private static async Task PrintStack(TextWriter writer, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
+        {
+            await writer.WriteLineAsync($"Thread (0x{threadId:X}):");
+            var stackIndex = stackSourceSample.StackIndex;
+            while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread ("))
+            {
+                string frame = $"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
+                    .Replace("UNMANAGED_CODE_TIME", "[Native Frames]");
+                stackIndex = stackSource.GetCallerIndex(stackIndex);
+
+                await writer.WriteLineAsync(frame);
+            }
+            await writer.WriteLineAsync();
         }
 
         private static string GetDotnetMonitorVersion()

@@ -1,0 +1,24 @@
+﻿<instrumentationManifest xmlns="http://schemas.microsoft.com/win/2004/08/events">
+  <instrumentation xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:win="http://manifests.microsoft.com/win/2004/08/windows/events">
+    <events xmlns="http://schemas.microsoft.com/win/2004/08/events">
+      <provider name="DotnetMonitorStacksEventProvider" guid="{AFF081FE-0247-4275-9C4E-021F3DC1DA35}">
+        <tasks>
+          <task name="DotnetMonitorStacks" value="1" eventGUID="{06A01367-79D3-4594-8EB3-C721603C4679}" />
+        </tasks>
+        <opcodes>
+          <opcode name="StackStart" message="Start" symbol="StackStart" value="12"/>
+        </opcodes>
+        <templates>
+          <template tid="ThreadStart">
+            <data name="ThreadId" inType="win:UInt64" />
+            <data name="OffsetsSize" inType="win:UInt32" />
+            <data name="Offsets" inType="win:UInt64" count="OffsetsSize"/>
+          </template>
+        </templates>
+        <events>
+          <event value="1" version="0" template="ThreadStart" opcode="StackStart" task="DotnetMonitorStacks" symbol="ThreadStart"/>
+        </events>
+      </provider>
+    </events>
+  </instrumentation>
+</instrumentationManifest>
