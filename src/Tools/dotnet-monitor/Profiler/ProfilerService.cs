@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor.Profiler
 {
-    internal sealed class ProfilerService : BackgroundService
+    internal sealed class ProfilerService : BackgroundService, IProfilerService
     {
         private readonly TaskCompletionSource<INativeFileProviderFactory> _fileProviderFactorySource = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly IOptions<InProcessFeaturesOptions> _inProcessFeaturesOptions;
@@ -125,10 +125,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Profiler
                         endpointInfo.RuntimeInstanceCookie.ToString("D"),
                         cancellationToken);
 
-                    await client.SetStartupProfilerAsync(
+                    _logger.LogCritical("About to attach profiler");
+
+                    await client.AttachProfilerAsync(TimeSpan.FromSeconds(30), 
                         ProfilerIdentifiers.Clsid.Guid,
                         profilerFileInfo.PhysicalPath,
+                        Array.Empty<byte>(),
                         cancellationToken);
+
+                    _logger.LogCritical("Finished attaching profiler");
                 }
             }
             catch (Exception ex)

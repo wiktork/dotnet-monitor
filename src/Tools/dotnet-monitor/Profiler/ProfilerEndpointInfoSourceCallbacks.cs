@@ -10,9 +10,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Profiler
 {
     internal sealed class ProfilerEndpointInfoSourceCallbacks : IEndpointInfoSourceCallbacks
     {
-        private readonly ProfilerService _profilerService;
+        private readonly IProfilerService _profilerService;
 
-        public ProfilerEndpointInfoSourceCallbacks(ProfilerService profilerService)
+        public ProfilerEndpointInfoSourceCallbacks(IProfilerService profilerService)
         {
             _profilerService = profilerService;
         }

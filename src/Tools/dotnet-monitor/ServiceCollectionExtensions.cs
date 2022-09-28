@@ -237,7 +237,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         public static IServiceCollection ConfigureProfiler(this IServiceCollection services)
         {
+            
             services.AddSingleton<ProfilerService>();
+            services.AddSingletonForwarder<IProfilerService, ProfilerService>();
             services.AddHostedServiceForwarder<ProfilerService>();
             services.AddSingleton<IEndpointInfoSourceCallbacks, ProfilerEndpointInfoSourceCallbacks>();
             services.TryAddSingleton<ISharedLibraryInitializer, DefaultSharedLibraryInitializer>();

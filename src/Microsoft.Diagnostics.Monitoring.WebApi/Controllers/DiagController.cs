@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Monitoring.Options;
 using Microsoft.Diagnostics.Monitoring.WebApi.Models;
-using Microsoft.Diagnostics.Monitoring.WebApi.Stacks;
 using Microsoft.Diagnostics.Monitoring.WebApi.Validation;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,7 +51,10 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
         private readonly OperationTrackerService _operationTrackerService;
         private readonly ICollectionRuleService _collectionRuleService;
         private readonly ProfilerChannel _profilerChannel;
+        private readonly IProfilerService _profilerService;
 
+        private static bool _profilerInitialized = false;
+        
         public DiagController(ILogger<DiagController> logger,
             IServiceProvider serviceProvider)
         {
@@ -66,6 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
             _operationTrackerService = serviceProvider.GetRequiredService<OperationTrackerService>();
             _collectionRuleService = serviceProvider.GetRequiredService<ICollectionRuleService>();
             _profilerChannel = serviceProvider.GetRequiredService<ProfilerChannel>();
+            _profilerService = serviceProvider.GetRequiredService<IProfilerService>();
         }
 
         /// <summary>
@@ -613,11 +616,18 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
 
             return await InvokeForProcess(async processInfo =>
             {
+                if (!_profilerInitialized)
+                {
+                    await _profilerService.ApplyProfiler(processInfo.EndpointInfo, HttpContext.RequestAborted);
+                    await Task.Delay(2000);
+                    _profilerInitialized = true;
+                }
+
                 bool plainText = Request.GetTypedHeaders().Accept?.Contains(TextPlainHeader) ?? false;
 
                 return await Result(Utilities.ArtifactType_Stacks, egressProvider, async (stream, token) =>
                 {
-                    await StackUtilities.CollectStacksAsync(null, processInfo.EndpointInfo, _profilerChannel, plainText, stream, token);
+                    await StackUtilities.CollectStacksAsync(null, processInfo.EndpointInfo, _profilerChannel, _logger, plainText, stream, token);
 
                 }, StackUtilities.GenerateStacksFilename(processInfo.EndpointInfo, plainText), plainText ? ContentTypes.TextPlain : ContentTypes.ApplicationJson, processInfo, asAttachment: false);
 

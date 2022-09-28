@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics.Tracing;
 using System.Threading;
@@ -26,10 +27,12 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
     {
         private TaskCompletionSource<CallStackResult> _stackResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private CallStackResult _result = new();
+        private ILogger _logger;
 
-        public EventStacksPipeline(DiagnosticsClient client, EventStacksPipelineSettings settings)
+        public EventStacksPipeline(DiagnosticsClient client, ILogger logger, EventStacksPipelineSettings settings)
             : base(client, settings)
         {
+            _logger = logger;
         }
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
@@ -56,8 +59,14 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
 
             await completedTask;
 
+            
+            
+
+            await _stackResult.Task;
             await stopSessionAsync();
             await sourceComplete.Task;
+
+            //await stopSessionAsync();
 
             if (_stackResult.Task.Status != TaskStatus.RanToCompletion)
             {
@@ -69,6 +78,8 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
 
         private void Callback(TraceEvent action)
         {
+            _logger.LogWarning($"{action.ProviderName} {action.ID}");
+
             //We do not have a manifest for our events, but we also lookup data by id instead of string.
             if (action.ID == CallStackEvents.Callstack)
             {

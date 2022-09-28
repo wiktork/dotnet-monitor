@@ -11,6 +11,7 @@ using Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests.Runners;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -141,18 +142,19 @@ namespace Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests
                 });
         }
 
-        [Theory]
+        [Theory(Timeout = 5000000)]
         [MemberData(nameof(ProfilerHelper.GetArchitecture), MemberType = typeof(ProfilerHelper))]
         public Task TestRepeatStackCalls(Architecture targetArchitecture)
         {
             return ScenarioRunner.SingleTarget(
                 _outputHelper,
                 _httpClientFactory,
-                WebApi.DiagnosticPortConnectionMode.Listen,
+                WebApi.DiagnosticPortConnectionMode.Connect,
                 TestAppScenarios.Stacks.Name,
                 appValidate: async (runner, client) =>
                 {
                     int processId = await runner.ProcessIdTask;
+
 
                     using ResponseStreamHolder holder1 = await client.CaptureStacksAsync(processId, plainText: false);
                     Assert.NotNull(holder1);

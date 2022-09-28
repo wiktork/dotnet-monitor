@@ -321,7 +321,7 @@ namespace Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests.HttpApi
         /// </summary>
         public static Task<ResponseStreamHolder> CaptureStacksAsync(this ApiClient client, int pid, bool plainText)
         {
-            return client.CaptureStacksAsync(pid, plainText, TestTimeouts.HttpApi);
+            return client.CaptureStacksAsync(pid, plainText, Timeout.InfiniteTimeSpan);
         }
 
         /// <summary>

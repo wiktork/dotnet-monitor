@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Monitoring.WebApi;
 using Microsoft.Diagnostics.Tools.Monitor.CollectionRules.Exceptions;
 using Microsoft.Diagnostics.Tools.Monitor.CollectionRules.Options.Actions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -59,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.CollectionRules.Actions
             EgressOperation egressOperation = new EgressOperation(
                 async (outputStream, token) =>
                 {
-                    await StackUtilities.CollectStacksAsync(startCompletionSource, EndpointInfo, _profilerChannel, isPlainText, outputStream, token);
+                    await StackUtilities.CollectStacksAsync(startCompletionSource, EndpointInfo, _profilerChannel, _serviceProvider.GetRequiredService<ILogger>(), isPlainText, outputStream, token);
                 },
                 Options.Egress,
                 fileName,

@@ -290,6 +290,8 @@ HRESULT MainProfiler::ProcessCallstackMessage()
         IfFailLogRet(eventProvider->WriteCallstack(stackState->GetStack()));
     }
 
+    Sleep(2000);
+
     IfFailLogRet(eventProvider->WriteEndEvent());
 
     return S_OK;

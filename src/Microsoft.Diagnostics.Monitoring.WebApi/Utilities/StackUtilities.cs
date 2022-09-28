@@ -4,6 +4,7 @@
 
 using Microsoft.Diagnostics.Monitoring.WebApi.Stacks;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading;
@@ -22,6 +23,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
         public static async Task CollectStacksAsync(TaskCompletionSource<object> startCompletionSource,
             IEndpointInfo endpointInfo,
             ProfilerChannel profilerChannel,
+            ILogger logger,
             bool plainText,
             Stream outputStream, CancellationToken token)
         {
@@ -29,7 +31,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
             {
                 Duration = Timeout.InfiniteTimeSpan
             };
-            await using var eventTracePipeline = new EventStacksPipeline(new DiagnosticsClient(endpointInfo.Endpoint), settings);
+            await using var eventTracePipeline = new EventStacksPipeline(new DiagnosticsClient(endpointInfo.Endpoint), logger, settings);
 
             Task runPipelineTask = await eventTracePipeline.StartAsync(token);
 
