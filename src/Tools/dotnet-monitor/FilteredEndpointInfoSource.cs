@@ -29,8 +29,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         public FilteredEndpointInfoSource(
             ServerEndpointInfoSource serverEndpointInfoSource,
+            SingleClientEndpointInfoSource singleClientEndpointInfoSource,
             IOptions<DiagnosticPortOptions> portOptions,
-            ILogger<ClientEndpointInfoSource> clientSourceLogger)
+            ILogger<ClientEndpointInfoSource> clientSourceLogger,
+            ILogger<SingleClientEndpointInfoSource> singleClientLogger,
+            IEnumerable<IEndpointInfoSourceCallbacks> callbacks)
         {
             _portOptions = portOptions.Value;
 
@@ -39,7 +42,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             switch (connectionMode)
             {
                 case DiagnosticPortConnectionMode.Connect:
-                    _source = new ClientEndpointInfoSource(clientSourceLogger);
+                    if (string.IsNullOrEmpty(_portOptions.EndpointName))
+                    {
+                        _source = new ClientEndpointInfoSource(clientSourceLogger);
+                    }
+                    else
+                    {
+                        _source = singleClientEndpointInfoSource;
+                    }
                     break;
                 case DiagnosticPortConnectionMode.Listen:
                     _source = serverEndpointInfoSource;

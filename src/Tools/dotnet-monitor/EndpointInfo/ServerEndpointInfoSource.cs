@@ -117,6 +117,16 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     NotifyAndRemoveAsync(server, stoppingToken)
                     );
             }
+            //else if ((_portOptions.ConnectionMode == DiagnosticPortConnectionMode.Connect) && (!string.IsNullOrEmpty(_portOptions.EndpointName)))
+            //{
+            //    IpcEndpointConfig config = new IpcEndpointConfig(_portOptions.EndpointName, IpcEndpointConfig.TransportType.NamedPipe, IpcEndpointConfig.PortType.Listen);
+            //    var endpointInfo = await EndpointInfo.FromIpcEndpointConfig(config, stoppingToken);
+
+
+            //    await Task.WhenAll(
+            //            ResumeAndQueueEndpointInfo(null, endpointInfo, stoppingToken),
+            //            MonitorEndpointsAsync(stoppingToken));
+            //}
         }
 
         /// <summary>

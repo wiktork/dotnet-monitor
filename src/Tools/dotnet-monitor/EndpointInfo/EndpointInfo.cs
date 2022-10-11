@@ -93,6 +93,43 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             };
         }
 
+        public static async Task<EndpointInfo> FromIpcEndpointConfig(IpcEndpointConfig config, CancellationToken token)
+        {
+            DiagnosticPortIpcEndpoint diagnosticPortIpcEndpoint = new DiagnosticPortIpcEndpoint(config);
+
+            var client = new DiagnosticsClient(config);
+
+            ProcessInfo processInfo = null;
+            try
+            {
+                // Primary motivation is to keep parity with the FromProcessId implementation,
+                // which provides the additional process information because it already has
+                // access to it.
+                processInfo = await client.GetProcessInfoAsync(token);
+            }
+            catch (ServerErrorException)
+            {
+                // The runtime likely doesn't understand the GetProcessInfo command.
+            }
+            catch (TimeoutException)
+            {
+                // Runtime didn't respond within client timeout.
+            }
+
+            _ = TryParseVersion(processInfo?.ClrProductVersionString, out Version runtimeVersion);
+
+            return new EndpointInfo()
+            {
+                Endpoint = diagnosticPortIpcEndpoint,
+                ProcessId = (int)(processInfo?.ProcessId ?? 0),
+                RuntimeInstanceCookie = processInfo?.RuntimeInstanceCookie ?? Guid.Empty,
+                CommandLine = processInfo?.CommandLine,
+                OperatingSystem = processInfo?.OperatingSystem,
+                ProcessArchitecture = processInfo?.ProcessArchitecture,
+                RuntimeVersion = runtimeVersion
+            };
+        }
+
         private static bool TryParseVersion(string versionString, out Version version)
         {
             version = null;
