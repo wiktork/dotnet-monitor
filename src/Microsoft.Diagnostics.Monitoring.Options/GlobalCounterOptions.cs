@@ -8,7 +8,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Microsoft.Diagnostics.Monitoring.WebApi
 {
-    public class GlobalCounterOptions
+    public partial class GlobalCounterOptions
     {
         public const float IntervalMinSeconds = 1;
         public const float IntervalMaxSeconds = 60 * 60 * 24; // One day
@@ -36,8 +36,28 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
 
         [Display(
             ResourceType = typeof(OptionsDisplayStrings),
-            Description = nameof(OptionsDisplayStrings.DisplayAttributeDescription_GlobalCounterOptions_ProviderIntervals))]
-        public System.Collections.Generic.IDictionary<string, float> ProviderIntervals { get; set; } = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+            Description = nameof(OptionsDisplayStrings.DisplayAttributeDescription_GlobalCounterOptions_Providers))]
+        public System.Collections.Generic.IDictionary<string, GlobalProviderOptions> Providers { get; set; } = new Dictionary<string, GlobalProviderOptions>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public class GlobalProviderOptions
+    {
+        [Range(GlobalCounterOptions.IntervalMinSeconds, GlobalCounterOptions.IntervalMaxSeconds)]
+        public float? IntervalSeconds { get; set; }
+    }
+
+    partial class GlobalCounterOptions : IValidatableObject
+    {
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            var results = new List<ValidationResult>();
+            foreach (GlobalProviderOptions options in Providers.Values)
+            {
+                Validator.TryValidateObject(options, new ValidationContext(options, null, null), results, true);
+            }
+
+            return results;
+        }
     }
 
     internal static class GlobalCounterOptionsExtensions
@@ -52,6 +72,6 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
             options.MaxTimeSeries.GetValueOrDefault(GlobalCounterOptionsDefaults.MaxTimeSeries);
 
         public static float GetProviderSpecificInterval(this GlobalCounterOptions options, string providerName) =>
-            options.ProviderIntervals.TryGetValue(providerName, out float interval) ? interval : options.GetIntervalSeconds();
+            options.Providers.TryGetValue(providerName, out GlobalProviderOptions providerOptions) ? providerOptions.IntervalSeconds ?? options.GetIntervalSeconds() : options.GetIntervalSeconds();
     }
 }

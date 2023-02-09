@@ -259,6 +259,9 @@
 2. missingProviderName: The specified provider that is missing.
 3. providersField: the field that the provider should be defined in.</comment>
   </data>
+  <data name="ErrorMessage_NestedValidationError" xml:space="preserve">
+    <value>'{0}' validation error: '{1}'</value>
+  </data>
   <data name="ErrorMessage_NoEnvironmentVariable" xml:space="preserve">
     <value>The environment block does not contain the '{0}' variable.</value>
     <comment>Gets the format string for an error when the given environment variable does not exist.

@@ -1041,11 +1041,11 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Dictionary of provider names and their specific intervals..
+        ///   Looks up a localized string similar to Dictionary of provider names and their global configuration..
         /// </summary>
-        public static string DisplayAttributeDescription_GlobalCounterOptions_ProviderIntervals {
+        public static string DisplayAttributeDescription_GlobalCounterOptions_Providers {
             get {
-                return ResourceManager.GetString("DisplayAttributeDescription_GlobalCounterOptions_ProviderIntervals", resourceCulture);
+                return ResourceManager.GetString("DisplayAttributeDescription_GlobalCounterOptions_Providers", resourceCulture);
             }
         }
         

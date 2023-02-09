@@ -322,6 +322,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos; validation error: &apos;{1}&apos;.
+        /// </summary>
+        internal static string ErrorMessage_NestedValidationError {
+            get {
+                return ResourceManager.GetString("ErrorMessage_NestedValidationError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The environment block does not contain the &apos;{0}&apos; variable..
         /// </summary>
         internal static string ErrorMessage_NoEnvironmentVariable {
