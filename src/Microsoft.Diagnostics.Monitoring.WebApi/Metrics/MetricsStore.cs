@@ -18,6 +18,8 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
     /// </summary>
     internal sealed class MetricsStore : IMetricsStore
     {
+        public int RequestCount { get; set; }
+
         private sealed class MetricKey
         {
             private ICounterPayload _metric;
