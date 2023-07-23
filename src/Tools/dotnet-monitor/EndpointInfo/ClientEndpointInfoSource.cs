@@ -39,8 +39,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             var endpointInfoTasks = new List<Task<EndpointInfo>>();
             // Run the EndpointInfo creation parallel. The call to FromProcessId sends
             // a GetProcessInfo command to the runtime instance to get additional information.
+            _logger.LogWarning("Starting published");
             foreach (int pid in DiagnosticsClient.GetPublishedProcesses())
             {
+                _logger.LogWarning("first published");
                 endpointInfoTasks.Add(Task.Run(async () =>
                 {
                     try

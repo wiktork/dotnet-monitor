@@ -75,6 +75,8 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
         [ProducesResponseType(typeof(IEnumerable<ProcessIdentifier>), StatusCodes.Status200OK)]
         public Task<ActionResult<IEnumerable<ProcessIdentifier>>> GetProcesses()
         {
+            _logger.LogError("!!!TestTestTest!!!");
+
             return this.InvokeService(async () =>
             {
                 IProcessInfo defaultProcessInfo = null;

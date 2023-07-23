@@ -73,8 +73,9 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
                     .Where(t => t.Result != null)
                     .Select(t => t.Result);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                Console.WriteLine(e.ToString());
                 throw new InvalidOperationException(Strings.ErrorMessage_ProcessEnumerationFailed);
             }
 

@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
                 operationRegistration?.Dispose();
             }
 
-            return new AutoDeleteFileStream(dumpFilePath);
+            return new AutoDeleteFileStream("/proc/1/root/" + dumpFilePath);
         }
 
         private bool IsListenMode => _portOptions.CurrentValue.GetConnectionMode() == DiagnosticPortConnectionMode.Listen;
