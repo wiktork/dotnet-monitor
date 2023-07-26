@@ -64,6 +64,11 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.Fun
                 return;
             }
 
+            if (string.Equals(Thread.CurrentThread.Name, "Console logger queue processing thread"))
+            {
+                return;
+            }
+
             var methodCache = FunctionProbesStub.InstrumentedMethodCache;
             if (methodCache == null ||
                 args == null ||
