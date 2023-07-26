@@ -30,20 +30,20 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
             }
 
             string[] systemTypes = { "System", "Microsoft" };
-            string[] disallowedTypes = { "Interop+Advapi", "Interop+Kernel32",
-                "System.Collections.Concurrent",
-                "System.ObjectDisposedException",
-                "System.Marvin",
-                "System.Convert",
-                "System.Runtime.InteropServices",
-                "System.Numerics",
-                "System.Threading",
-                "System.Collections.Generic",
-                "System.IO",
-                "System.Runtime",
-                "System.Text",
-                "System.Buffers",
-                "System.Globalization" };
+            string[] disallowedTypes = { "Interop+Advapi", "Interop+Kernel32" };
+                //"System.Collections.Concurrent",
+                //"System.ObjectDisposedException",
+                //"System.Marvin",
+                //"System.Convert",
+                //"System.Runtime.InteropServices",
+                //"System.Numerics",
+                //"System.Threading",
+                //"System.Collections.Generic",
+                //"System.IO",
+                //"System.Runtime",
+                //"System.Text",
+                //"System.Buffers",
+                //"System.Globalization" };
 
             string[] disallowedNamespaces = { nameof(System) };
 

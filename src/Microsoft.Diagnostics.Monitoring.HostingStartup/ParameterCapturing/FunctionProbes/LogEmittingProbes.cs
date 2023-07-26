@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
+using System.Xml.Serialization;
 
 namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.FunctionProbes
 {
@@ -47,6 +49,20 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.Fun
                 }
             }
             */
+
+            if (Environment.CurrentManagedThreadId == _thread.ManagedThreadId)
+            {
+                //Mostly works but still some circular relationships:
+//                Microsoft.Diagnostics.Monitoring.HostingStartup.dll!Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.FunctionProbes.LogEmittingProbes.EnterProbe(ulong uniquifier, object[] args) Line 85 C#
+// 	Microsoft.Diagnostics.Monitoring.HostingStartup.dll!Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.FunctionProbes.FunctionProbesStub.EnterProbeStub(ulong uniquifier, object[] args) Line 37    C#
+//> System.Private.CoreLib.dll!System.Collections.Generic.Queue<Microsoft.Extensions.Logging.Console.LogMessageEntry>.Count.get()   C#
+// 	Microsoft.Extensions.Logging.Console.dll!Microsoft.Extensions.Logging.Console.ConsoleLoggerProcessor.TryDequeue(out Microsoft.Extensions.Logging.Console.LogMessageEntry item) Line 148 C#
+// 	Microsoft.Extensions.Logging.Console.dll!Microsoft.Extensions.Logging.Console.ConsoleLoggerProcessor.ProcessLogQueue() Line 106 C#
+                // Because Console Logger pushes to a separate thread, that thread processor is instrumented and now adding additional
+                // entries. This is circular.
+
+                return;
+            }
 
             var methodCache = FunctionProbesStub.InstrumentedMethodCache;
             if (methodCache == null ||
