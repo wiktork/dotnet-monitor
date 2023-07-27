@@ -78,7 +78,11 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
                 {
                     foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
                     {
-                        methods.Add(method);
+                        if (method.Name == "Index")
+                        {
+                            methods.Add(method);
+
+                        }
                     }
                 }
             }

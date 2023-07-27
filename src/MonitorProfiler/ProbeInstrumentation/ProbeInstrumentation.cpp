@@ -283,8 +283,8 @@ HRESULT ProbeInstrumentation::InstallProbes(vector<UNPROCESSED_INSTRUMENTATION_R
         newRequests.insert({{processedRequest.moduleId, processedRequest.methodDef}, processedRequest});
     }
 
-    IfFailLogRet(m_pCorProfilerInfo->RequestReJITWithInliners(
-        COR_PRF_REJIT_BLOCK_INLINING,
+    IfFailLogRet(m_pCorProfilerInfo->RequestReJIT(
+        //COR_PRF_REJIT_BLOCK_INLINING,
         static_cast<ULONG>(requestedModuleIds.size()),
         requestedModuleIds.data(),
         requestedMethodDefs.data()));
