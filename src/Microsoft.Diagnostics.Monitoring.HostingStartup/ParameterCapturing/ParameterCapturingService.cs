@@ -22,6 +22,7 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
 
         private readonly FunctionProbesManager? _probeManager;
         private readonly ILogger? _logger;
+        private readonly ParameterCapturingLogger? _parameterCapturingLogger;
 
         public ParameterCapturingService(IServiceProvider services)
         {
@@ -31,9 +32,11 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
                 return;
             }
 
+            _parameterCapturingLogger = new ParameterCapturingLogger(_logger);
+
             try
             {
-                _probeManager = new FunctionProbesManager(new LogEmittingProbes(_logger));
+                _probeManager = new FunctionProbesManager(new LogEmittingProbes(_parameterCapturingLogger));
                 _isAvailable = true;
             }
             catch
@@ -168,10 +171,10 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
             try
             {
                 _probeManager?.Dispose();
+                _parameterCapturingLogger?.Dispose();
             }
             catch
             {
-
             }
 
             base.Dispose();

@@ -12,28 +12,11 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.Fun
 {
     internal sealed class LogEmittingProbes : IFunctionProbes
     {
-        private readonly ILogger _logger;
-        private readonly Thread _thread;
-        private BlockingCollection<(string, string[])> _messages;
+        private readonly ParameterCapturingLogger _logger;
 
-        public LogEmittingProbes(ILogger logger)
+        public LogEmittingProbes(ParameterCapturingLogger logger)
         {
             _logger = logger;
-            _thread = new Thread(ThreadProc);
-
-            //Do not schedule ahead of app work
-            _thread.Priority = ThreadPriority.BelowNormal;
-            _messages = new BlockingCollection<(string, string[])>(1024);
-            _thread.Start();
-        }
-
-        private void ThreadProc()
-        {
-            while (true)
-            {
-                var message = _messages.Take();
-                _logger.Log(LogLevel.Information, message.Item1, message.Item2);
-            }
         }
 
         public void EnterProbe(ulong uniquifier, object[] args)
@@ -50,8 +33,10 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.Fun
             }
             */
 
-            if (Environment.CurrentManagedThreadId == _thread.ManagedThreadId)
+            if (!_logger.ShouldLog())
             {
+                return;
+            }
                 //Mostly works but still some circular relationships:
 //                Microsoft.Diagnostics.Monitoring.HostingStartup.dll!Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.FunctionProbes.LogEmittingProbes.EnterProbe(ulong uniquifier, object[] args) Line 85 C#
 // 	Microsoft.Diagnostics.Monitoring.HostingStartup.dll!Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.FunctionProbes.FunctionProbesStub.EnterProbeStub(ulong uniquifier, object[] args) Line 37    C#
@@ -61,13 +46,6 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.Fun
                 // Because Console Logger pushes to a separate thread, that thread processor is instrumented and now adding additional
                 // entries. This is circular.
 
-                return;
-            }
-
-            if (string.Equals(Thread.CurrentThread.Name, "Console logger queue processing thread"))
-            {
-                return;
-            }
 
             var methodCache = FunctionProbesStub.InstrumentedMethodCache;
             if (methodCache == null ||
@@ -95,18 +73,8 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing.Fun
                 argValues[fmtIndex++] = PrettyPrinter.FormatObject(args[i]);
             }
 
-            if (instrumentedMethod.CaptureMode == ParameterCaptureMode.Background)
-            {
-                _messages.TryAdd((instrumentedMethod.MethodWithParametersTemplateString, argValues));
-                return;
-            }
-
-
-            //
             // System.Console.WriteLine("IO Test");
-            _logger.Log(LogLevel.Information, instrumentedMethod.MethodWithParametersTemplateString, argValues);
-
-            return;
+            _logger.Log(instrumentedMethod.CaptureMode, instrumentedMethod.MethodWithParametersTemplateString, argValues);
         }
     }
 }

@@ -9,9 +9,9 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
 {
     public enum ParameterCaptureMode
     {
+        Disallowed = 0,
         Inline,
         Background,
-        Disallowed
     }
 
     public sealed class InstrumentedMethod
@@ -31,24 +31,7 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
                 }
             }
 
-
-
-            if (disallowedNamespaces.Contains(method.DeclaringType?.Namespace))
-            {
-                CaptureMode = ParameterCaptureMode.Disallowed;
-            }
-            else if (disallowedTypes.Select(type => method.DeclaringType?.FullName?.StartsWith(type) ?? false).Any(t => t))
-            {
-                CaptureMode = ParameterCaptureMode.Disallowed;
-            }
-            else if (systemTypes.Select(type => method.DeclaringType?.FullName?.StartsWith(type) ?? false).Any(t => t))
-            {
-                CaptureMode = ParameterCaptureMode.Background;
-            }
-            else
-            {
-                CaptureMode = ParameterCaptureMode.Inline;
-            }
+            CaptureMode = ComputeCaptureMode(method.DeclaringType?.FullName);
         }
 
         private static ParameterCaptureMode ComputeCaptureMode(string? typeName)
