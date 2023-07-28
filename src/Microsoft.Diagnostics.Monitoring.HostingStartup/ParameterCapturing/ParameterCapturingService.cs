@@ -21,18 +21,24 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
         private readonly bool _isAvailable;
 
         private readonly FunctionProbesManager? _probeManager;
-        private readonly ILogger? _logger;
+        private readonly ILogger? _userLogger;
+        private readonly ILogger? _systemLogger;
         private readonly ParameterCapturingLogger? _parameterCapturingLogger;
 
         public ParameterCapturingService(IServiceProvider services)
         {
-            _logger = services.GetService<ILogger<DotnetMonitor.ParameterCapture.UserCode>>();
-            if (_logger == null)
+            _userLogger = services.GetService<ILogger<DotnetMonitor.ParameterCapture.UserCode>>();
+            if (_userLogger == null)
+            {
+                return;
+            }
+            _systemLogger = services.GetService<ILogger<DotnetMonitor.ParameterCapture.SystemCode>>();
+            if (_systemLogger == null)
             {
                 return;
             }
 
-            _parameterCapturingLogger = new ParameterCapturingLogger(_logger);
+            _parameterCapturingLogger = new ParameterCapturingLogger(_userLogger, _systemLogger);
 
             try
             {
@@ -65,11 +71,11 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
             _probeManager?.StartCapturing(methods);
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             if (!_isAvailable)
             {
-                return Task.CompletedTask;
+                return;// Task.CompletedTask;
             }
 
             /*
@@ -79,15 +85,22 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
             }
             */
 
-            StressTest();
 
-            return Task.Delay(Timeout.Infinite, stoppingToken);
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(5000, stoppingToken);
+
+                StressTest();
+
+            }, stoppingToken);
+
+            await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
 
         private void StressTest()
         {
-            const bool OnlyHookCorLib = true;
+            const bool OnlyHookCorLib = false;
 
             List<MethodInfo> methods = new();
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.ReflectionOnly && !assembly.IsDynamic).ToArray();
@@ -100,14 +113,20 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
                         continue;
                     }
 
+                    if (!mod.Name.Contains("WebApplication"))
+                    {
+                        continue;
+                    }
+
                     foreach (Type type in mod.GetTypes())
                     {
-                        methods.AddRange(GetAllMethods(type));
+
+                        methods.AddRange(GetAllMethods(type).Where(m => m.Name == "Index"));
                     }
                 }
             }
 
-            _logger!.LogCritical("Beginning stress test, hooked {Number} methods", methods.Count);
+            _userLogger!.LogCritical("Beginning stress test, hooked {Number} methods", methods.Count);
             _probeManager!.StartCapturing(methods);
         }
 

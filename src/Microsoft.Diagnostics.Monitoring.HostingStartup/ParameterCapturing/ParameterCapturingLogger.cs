@@ -15,7 +15,8 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
 {
     internal sealed class ParameterCapturingLogger : IDisposable
     {
-        private readonly ILogger _logger;
+        private readonly ILogger _userLogger;
+        private readonly ILogger _systemLogger;
         private readonly Thread _thread;
         private BlockingCollection<(string format, string[] args)> _messages;
         private uint _droppedMessageCounter;
@@ -28,9 +29,10 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
             "Console logger queue processing thread",
         };
 
-        public ParameterCapturingLogger(ILogger logger)
+        public ParameterCapturingLogger(ILogger userLogger, ILogger systemLogger)
         {
-            _logger = logger;
+            _userLogger = userLogger;
+            _systemLogger = systemLogger;
             _thread = new Thread(ThreadProc);
 
             //Do not schedule ahead of app work
@@ -58,7 +60,7 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
         {
             if (mode == ParameterCaptureMode.Inline)
             {
-                Log(format, args);
+                Log(_userLogger, format, args);
             }
             else if (mode == ParameterCaptureMode.Background)
             {
@@ -74,14 +76,11 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
             while (!DisposableHelper.IsDisposed(ref _disposedState))
             {
                 (string format, string[] args) = _messages.Take();
-                Log(format, args);
+                Log(_systemLogger, format, args);
             }
         }
 
-        private void Log(string format, string[] args)
-        {
-            _logger.Log(LogLevel.Information, format, args);
-        }
+        private static void Log(ILogger logger, string format, string[] args) => logger.Log(LogLevel.Information, format, args);
 
         public void Dispose()
         {

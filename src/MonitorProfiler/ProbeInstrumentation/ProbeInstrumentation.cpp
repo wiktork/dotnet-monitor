@@ -353,7 +353,8 @@ void ProbeInstrumentation::AddProfilerEventMask(DWORD& eventsLow)
     //
     // This issue most commonly occurs on MacOS.
     //
-    eventsLow |= COR_PRF_MONITOR::COR_PRF_ENABLE_REJIT | COR_PRF_MONITOR::COR_PRF_MONITOR_JIT_COMPILATION;
+    eventsLow |= COR_PRF_MONITOR::COR_PRF_ENABLE_REJIT | COR_PRF_MONITOR::COR_PRF_MONITOR_JIT_COMPILATION
+        | COR_PRF_MONITOR::COR_PRF_DISABLE_OPTIMIZATIONS | COR_PRF_MONITOR::COR_PRF_DISABLE_OPTIMIZATIONS;
 }
 
 HRESULT STDMETHODCALLTYPE ProbeInstrumentation::GetReJITParameters(ModuleID moduleId, mdMethodDef methodDef, ICorProfilerFunctionControl* pFunctionControl)
