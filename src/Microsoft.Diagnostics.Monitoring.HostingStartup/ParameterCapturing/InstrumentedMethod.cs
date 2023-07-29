@@ -1,9 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
 {
@@ -17,6 +20,11 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
     public sealed class InstrumentedMethod
     {
         private static readonly string[] SystemTypePrefixes = { "System.", "Microsoft." };
+        //private static readonly HashSet<(string, string)> DisallowedMethods = new()
+        //{
+        //    (typeof(System.Threading.Thread).FullName!, "get_" + nameof(System.Threading.Thread.Name)),
+        //    (typeof(Environment).FullName!, "get_" + nameof(Environment.CurrentManagedThreadId)),
+        //};
 
         public InstrumentedMethod(MethodInfo method, uint[] boxingTokens)
         {
@@ -31,10 +39,10 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
                 }
             }
 
-            CaptureMode = ComputeCaptureMode(method.DeclaringType?.FullName);
+            CaptureMode = ComputeCaptureMode(method.DeclaringType?.FullName, method.Name);
         }
 
-        private static ParameterCaptureMode ComputeCaptureMode(string? typeName)
+        private static ParameterCaptureMode ComputeCaptureMode(string? typeName, string? methodName)
         {
             foreach(string prefix in SystemTypePrefixes)
             {
@@ -43,6 +51,13 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
                     return ParameterCaptureMode.Background;
                 }
             }
+
+            //if (DisallowedMethods.Contains((typeName!, methodName!)))
+            //{
+            //    return ParameterCaptureMode.Disallowed;
+            //}
+               
+
             return ParameterCaptureMode.Inline;
         }
 

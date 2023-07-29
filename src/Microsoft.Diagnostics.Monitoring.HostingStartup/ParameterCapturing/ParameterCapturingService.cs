@@ -85,14 +85,7 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
             }
             */
 
-
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(5000, stoppingToken);
-
-                StressTest();
-
-            }, stoppingToken);
+            StressTest();
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -100,7 +93,7 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
 
         private void StressTest()
         {
-            const bool OnlyHookCorLib = false;
+            const bool OnlyHookCorLib = true;
 
             List<MethodInfo> methods = new();
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.ReflectionOnly && !assembly.IsDynamic).ToArray();
@@ -113,16 +106,18 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
                         continue;
                     }
 
-                    if (!mod.Name.Contains("WebApplication"))
-                    {
-                        continue;
-                    }
+                    //if (!mod.Name.Contains("WebApplication"))
+                    //{
+                    //    continue;
+                    //}
 
                     foreach (Type type in mod.GetTypes())
                     {
-
-                        methods.AddRange(GetAllMethods(type).Where(m => m.Name == "Index"));
+                        methods.AddRange(GetAllMethods(type).Where((m) => true));
+                        //    methods.AddRange(GetAllMethods(type).Where(m => m.Name == "Index"));
                     }
+
+                    
                 }
             }
 
@@ -160,6 +155,9 @@ namespace Microsoft.Diagnostics.Monitoring.HostingStartup.ParameterCapturing
 //                    fullName.Contains("log", StringComparison.OrdinalIgnoreCase) ||
 //                    fullName.Contains("System.Collections") ||
 //                    fullName.Contains("System.Threading") ||
+                    fullName.Contains("System.Runtime.CompilerServices.") ||
+                    fullName.Contains("System.Type") ||
+                    fullName.Contains("Interop+Advapi32") ||
                     fullName.Contains("Microsoft.Diagnostics.") ||
                     false
                     )
