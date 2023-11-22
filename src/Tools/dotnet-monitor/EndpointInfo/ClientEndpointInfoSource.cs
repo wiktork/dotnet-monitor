@@ -40,27 +40,27 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             // Run the EndpointInfo creation parallel. The call to FromProcessId sends
             // a GetProcessInfo command to the runtime instance to get additional information.
             _logger.LogWarning("Starting published");
-            foreach (int pid in DiagnosticsClient.GetPublishedProcesses())
+            foreach (var pid in DiagnosticsClient.GetAllPublishedProcesses("/host/proc", _logger))
             {
                 _logger.LogWarning("first published");
                 endpointInfoTasks.Add(Task.Run(async () =>
                 {
                     try
                     {
-                        return await EndpointInfo.FromProcessIdAsync(pid, new NotSupportedServiceProvider(), linkedToken);
+                        return await EndpointInfo.FromProcessIdAsync(pid.Pid, pid.HostPid, new NotSupportedServiceProvider(), linkedToken);
                     }
                     // Catch when timeout on waiting for EndpointInfo creation. Some runtime instances may be
                     // in a bad state and not respond to any requests on their diagnostic pipe; gracefully abandon
                     // waiting for these processes.
                     catch (OperationCanceledException) when (timeoutToken.IsCancellationRequested)
                     {
-                        _logger.DiagnosticRequestCancelled(pid);
+                        _logger.DiagnosticRequestCancelled(pid.Pid);
                         return null;
                     }
                     // Catch all other exceptions and log them.
                     catch (Exception ex)
                     {
-                        _logger.DiagnosticRequestFailed(pid, ex);
+                        _logger.DiagnosticRequestFailed(pid.Pid, ex);
                         return null;
                     }
                 }, linkedToken));

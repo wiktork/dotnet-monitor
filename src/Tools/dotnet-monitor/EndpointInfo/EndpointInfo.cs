@@ -13,9 +13,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
     internal sealed class EndpointInfo : EndpointInfoBase
     {
-        public static async Task<EndpointInfo> FromProcessIdAsync(int processId, IServiceProvider serviceProvider, CancellationToken token)
+        public static async Task<EndpointInfo> FromProcessIdAsync(int processId, int? hostPid, IServiceProvider serviceProvider, CancellationToken token)
         {
-            var client = new DiagnosticsClient(processId);
+            var client = new DiagnosticsClient(processId, hostPid);
 
             ProcessInfo processInfo = null;
             try
