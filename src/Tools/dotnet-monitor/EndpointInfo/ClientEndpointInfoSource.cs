@@ -22,9 +22,13 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         private readonly ILogger<ClientEndpointInfoSource> _logger;
 
+        //TODO Change this to a setting rather than a field.
+        private readonly string _procfsPrefix;
+
         public ClientEndpointInfoSource(ILogger<ClientEndpointInfoSource> logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _procfsPrefix = "/host/proc";
         }
 
         public async Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(CancellationToken token)
@@ -40,14 +44,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             // Run the EndpointInfo creation parallel. The call to FromProcessId sends
             // a GetProcessInfo command to the runtime instance to get additional information.
             _logger.LogWarning("Starting published");
-            foreach (var pid in DiagnosticsClient.GetAllPublishedProcesses("/host/proc", _logger))
+            foreach (var pid in GetAllPublishedProcesses())
             {
                 _logger.LogWarning("first published");
                 endpointInfoTasks.Add(Task.Run(async () =>
                 {
                     try
                     {
-                        return await EndpointInfo.FromProcessIdAsync(pid.Pid, pid.HostPid, new NotSupportedServiceProvider(), linkedToken);
+                        return await EndpointInfo.FromProcessIdAsync(pid.Pid, pid.HostPid, _procfsPrefix, new NotSupportedServiceProvider(), linkedToken);
                     }
                     // Catch when timeout on waiting for EndpointInfo creation. Some runtime instances may be
                     // in a bad state and not respond to any requests on their diagnostic pipe; gracefully abandon
@@ -72,5 +76,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
             return endpointInfoTasks.Where(t => t.Result != null).Select(t => t.Result);
         }
+
+        private IEnumerable<(int Pid, int? HostPid)> GetAllPublishedProcesses() =>
+            _procfsPrefix == null ? DiagnosticsClient.GetPublishedProcesses().Select(pid => (pid, (int?)null)) :
+                DiagnosticsClient.GetAllPublishedProcesses(_procfsPrefix).Select(p => (p.Pid, (int?)p.HostPid));
     }
 }

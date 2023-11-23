@@ -13,9 +13,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
     internal sealed class EndpointInfo : EndpointInfoBase
     {
-        public static async Task<EndpointInfo> FromProcessIdAsync(int processId, int? hostPid, IServiceProvider serviceProvider, CancellationToken token)
+        public static async Task<EndpointInfo> FromProcessIdAsync(int processId, int? hostPid, string procfsPrefix, IServiceProvider serviceProvider, CancellationToken token)
         {
-            var client = new DiagnosticsClient(processId, hostPid);
+            var client = new DiagnosticsClient(processId, hostPid, procfsPrefix);
 
             ProcessInfo processInfo = null;
             try
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             // if an app is running as 3.1
             return new EndpointInfo()
             {
-                Endpoint = new PidIpcEndpoint(processId),
+                Endpoint = new PidIpcEndpoint(processId, hostPid, procfsPrefix),
                 ProcessId = processId,
                 RuntimeInstanceCookie = processInfo?.RuntimeInstanceCookie ?? Guid.Empty,
                 CommandLine = processInfo?.CommandLine,

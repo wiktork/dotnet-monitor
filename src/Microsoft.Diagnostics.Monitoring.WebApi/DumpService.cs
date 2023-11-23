@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
         private readonly OperationTrackerService _operationTrackerService;
         private readonly IOptionsMonitor<DiagnosticPortOptions> _portOptions;
         private readonly IOptionsMonitor<StorageOptions> _storageOptions;
+        private string _procfsPrefix;
 
         public DumpService(
             IOptionsMonitor<StorageOptions> storageOptions,
@@ -27,6 +28,9 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
             _portOptions = portOptions ?? throw new ArgumentNullException(nameof(portOptions));
             _storageOptions = storageOptions ?? throw new ArgumentNullException(nameof(StorageOptions));
             _operationTrackerService = operationTrackerService ?? throw new ArgumentNullException(nameof(operationTrackerService));
+
+            //TODO Use option isntead
+            _procfsPrefix = "/host/proc";
         }
 
         public async Task<Stream> DumpAsync(IEndpointInfo endpointInfo, Models.DumpType mode, CancellationToken token)
@@ -80,7 +84,14 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
                 operationRegistration?.Dispose();
             }
 
-            return new AutoDeleteFileStream("/proc/1/root/" + dumpFilePath);
+            if ((_procfsPrefix != null) && (endpointInfo.Endpoint is PidIpcEndpoint pidEndpoint))
+            {
+                //We request a relative path for the runtime to create the dump, but we must request
+                dumpFilePath = Path.Combine(_procfsPrefix, pidEndpoint.HostPid.Value.ToString(), "root", Path.IsPathRooted(dumpFilePath) ? dumpFilePath.Substring(1) : dumpFilePath);
+            }
+
+            //we must return the path to the host
+            return new AutoDeleteFileStream(dumpFilePath);
         }
 
         private bool IsListenMode => _portOptions.CurrentValue.GetConnectionMode() == DiagnosticPortConnectionMode.Listen;
