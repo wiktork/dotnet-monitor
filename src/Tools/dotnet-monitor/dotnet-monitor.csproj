@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" />
     <PackageReference Include="Microsoft.Identity.Web" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="System.CommandLine" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
@@ -54,13 +55,8 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <Target Name="EmbedWebApiXmlDocumentation"
-          DependsOnTargets="ResolveAssemblyReferences"
-          BeforeTargets="AssignTargetPaths">
-    <MSBuild Projects="..\..\Microsoft.Diagnostics.Monitoring.WebApi\Microsoft.Diagnostics.Monitoring.WebApi.csproj"
-             Properties="TargetFramework=$(TargetFramework)"
-             RemoveProperties="RuntimeIdentifier"
-             Targets="GetDocumentationFile">
+  <Target Name="EmbedWebApiXmlDocumentation" DependsOnTargets="ResolveAssemblyReferences" BeforeTargets="AssignTargetPaths">
+    <MSBuild Projects="..\..\Microsoft.Diagnostics.Monitoring.WebApi\Microsoft.Diagnostics.Monitoring.WebApi.csproj" Properties="TargetFramework=$(TargetFramework)" RemoveProperties="RuntimeIdentifier" Targets="GetDocumentationFile">
       <Output ItemName="_WebApiDocumentationFiles" TaskParameter="TargetOutputs" />
     </MSBuild>
     <!-- Add the WebApi documentation file as an embedded resource. -->
@@ -79,8 +75,7 @@
   <Import Project="$(RepositoryEngineeringDir)PublishProjects.targets" />
 
   <!-- Publish projects unless skipped -->
-  <Target Name="PublishProjectsBeforePack"
-          Condition="'$(SkipPublishProjects)' != 'true'">
+  <Target Name="PublishProjectsBeforePack" Condition="'$(SkipPublishProjects)' != 'true'">
     <CallTarget Targets="PublishProjects" />
   </Target>
 
@@ -88,8 +83,7 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);CollectTfmSpecificPackageFiles</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
-  <Target Name="CollectTfmSpecificPackageFiles"
-          DependsOnTargets="PublishProjectsBeforePack">
+  <Target Name="CollectTfmSpecificPackageFiles" DependsOnTargets="PublishProjectsBeforePack">
     <ItemGroup>
       <!-- Pack the profiler library for each platform. -->
       <AdditionalPackageFile Include="@(MonitorProfilerLibraryFile)">
@@ -111,7 +105,7 @@
     </ItemGroup>
     <ItemGroup>
       <!-- Pack the file if it exists. -->
-      <TfmSpecificPackageFile Include="@(AdditionalPackageFile->Exists())" />
+      <TfmSpecificPackageFile Include="@(AdditionalPackageFile-&gt;Exists())" />
       <!-- Pack startup hook files -->
       <TfmSpecificPackageFile Include="$(StartupHookLibraryPath)">
         <PackagePath>tools/$(TargetFramework)/any/shared/any/$(StartupHookTargetFramework)</PackagePath>
