@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Diagnostics.Tools.Monitor.Commands;
+using Microsoft.Diagnostics.Tools.Monitor.Otlp;
 using System;
 using System.CommandLine;
 using System.IO;
@@ -205,6 +206,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             // Prevent child processes from inheriting startup hooks
             Environment.SetEnvironmentVariable(ToolIdentifiers.EnvironmentVariables.StartupHooks, null);
+
+            OtlpEgress egress = new OtlpEgress();
+            egress.EgressMetrics();
 
             TestAssemblies.SimulateStartupHook();
 
