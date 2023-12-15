@@ -37,7 +37,16 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Otlp
         public OtlpEgress()
         {
             HostBuilder builder = new HostBuilder();
-            builder.ConfigureServices((s) => s.AddOpenTelemetry());
+            builder.ConfigureServices((s) =>
+            {
+                var otelBuilder = s.AddOpenTelemetry();
+                otelBuilder.WithMetrics(configure =>
+                {
+                    configure.AddMeter("System.Runtime");
+                    configure.AddOtlpExporter();
+                });
+            });
+
             var host = builder.Build();
             var listener = host.Services.GetRequiredService<IMetricsListener>();
             _listener = listener;
@@ -50,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Otlp
 
         public void EgressMetrics()
         {
-            _listener.InstrumentPublished(_instrument, out _);
+            bool result = _listener.InstrumentPublished(_instrument, out _);
             _listener.GetMeasurementHandlers().IntHandler(_instrument, 5, null, null);
 
         }
