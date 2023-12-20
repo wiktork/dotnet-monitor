@@ -44,7 +44,6 @@ namespace Microsoft.Diagnostics.Monitoring.Extension.Common
             return egressCommand;
         }
 
-
         private static async Task<int> Egress<TProvider, TOptions>(Action<IServiceCollection> configureServices, CancellationToken token)
             where TProvider : EgressProvider<TOptions>
             where TOptions : class, new()
@@ -138,7 +137,7 @@ namespace Microsoft.Diagnostics.Monitoring.Extension.Common
             return serviceProvider;
         }
 
-        internal static async Task<ExtensionEgressPayload> GetPayload(CancellationToken token)
+        public static async Task<ExtensionEgressPayload> GetPayload(CancellationToken token)
         {
             StdInStream = Console.OpenStandardInput();
 
@@ -158,7 +157,7 @@ namespace Microsoft.Diagnostics.Monitoring.Extension.Common
 
                 if (payloadLengthBuffer < 0)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(payloadLengthBuffer));
+                    throw new ArgumentException(nameof(payloadLengthBuffer));
                 }
             }
 
@@ -209,6 +208,8 @@ namespace Microsoft.Diagnostics.Monitoring.Extension.Common
             StdInStream.Close();
         }
 
+        public static Stream GetStdInStream() => StdInStream;
+
         private static async Task GetStream(Stream outputStream, CancellationToken cancellationToken)
         {
             const int DefaultBufferSize = 0x10000;
@@ -236,7 +237,7 @@ namespace Microsoft.Diagnostics.Monitoring.Extension.Common
         }
     }
 
-    internal sealed class ExtensionEgressPayload
+    public sealed class ExtensionEgressPayload
     {
         public EgressArtifactSettings Settings { get; set; }
         public Dictionary<string, string> Properties { get; set; }
