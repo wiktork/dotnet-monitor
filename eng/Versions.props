@@ -5,6 +5,7 @@
   <Import Project="dependabot/net6.0/Versions.props" />
   <Import Project="dependabot/net7.0/Versions.props" />
   <Import Project="dependabot/net8.0/Versions.props" />
+  <Import Project="dependabot/net9.0/Versions.props" />
   <Import Project="dependabot/netcoreapp3.1/Versions.props" />
   <PropertyGroup Label="Versioning">
     <RepositoryUrl>https://github.com/dotnet/dotnet-monitor</RepositoryUrl>
@@ -32,9 +33,9 @@
     <!-- The TFMs of the dotnet-monitor tool.  -->
     <ToolTargetFrameworks>$(LatestTargetFramework)</ToolTargetFrameworks>
     <!-- The TFMs of that the dotnet-monitor tool supports diagnosing. -->
-    <TestTargetFrameworks>net6.0;net7.0;$(LatestTargetFramework)</TestTargetFrameworks>
+    <TestTargetFrameworks>net6.0;net7.0;net8.0;$(LatestTargetFramework)</TestTargetFrameworks>
     <!-- The TFM for generating schema.json and OpenAPI docs. -->
-    <SchemaTargetFramework>net8.0</SchemaTargetFramework>
+    <SchemaTargetFramework>net9.0</SchemaTargetFramework>
   </PropertyGroup>
   <PropertyGroup Label="Arcade">
     <UsingToolXliff>false</UsingToolXliff>
@@ -81,6 +82,7 @@
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
     <MicrosoftAspNetCoreApp70Version>$(MicrosoftNETCoreApp70Version)</MicrosoftAspNetCoreApp70Version>
     <MicrosoftAspNetCoreApp80Version>$(MicrosoftNETCoreApp80Version)</MicrosoftAspNetCoreApp80Version>
+    <MicrosoftAspNetCoreApp90Version>$(MicrosoftNETCoreApp90Version)</MicrosoftAspNetCoreApp90Version>
   </PropertyGroup>
   <PropertyGroup Label="Dev Workflow">
     <!-- These versions are not used directly. For Dev workflows, nuget requires these to properly follow
@@ -111,6 +113,14 @@
     <MicrosoftExtensionsLoggingAbstractionsVersion>$(MicrosoftExtensionsLoggingAbstractions80Version)</MicrosoftExtensionsLoggingAbstractionsVersion>
     <MicrosoftExtensionsLoggingConsoleVersion>$(MicrosoftExtensionsLoggingConsole80Version)</MicrosoftExtensionsLoggingConsoleVersion>
   </PropertyGroup>
+  <PropertyGroup Label=".NET 9 Dependent" Condition=" '$(TargetFramework)' == 'net9.0' ">
+    <MicrosoftAspNetCoreAuthenticationJwtBearerVersion>$(MicrosoftAspNetCoreApp90Version)</MicrosoftAspNetCoreAuthenticationJwtBearerVersion>
+    <MicrosoftAspNetCoreAuthenticationNegotiateVersion>$(MicrosoftAspNetCoreApp90Version)</MicrosoftAspNetCoreAuthenticationNegotiateVersion>
+    <MicrosoftExtensionsConfigurationAbstractionsVersion>$(MicrosoftExtensionsConfigurationAbstractions90Version)</MicrosoftExtensionsConfigurationAbstractionsVersion>
+    <MicrosoftExtensionsLoggingVersion>$(MicrosoftExtensionsLogging90Version)</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>$(MicrosoftExtensionsLoggingAbstractions90Version)</MicrosoftExtensionsLoggingAbstractionsVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>$(MicrosoftExtensionsLoggingConsole90Version)</MicrosoftExtensionsLoggingConsoleVersion>
+  </PropertyGroup>  
   <PropertyGroup Condition="'$(UseMicrosoftDiagnosticsMonitoringShippedVersion)' == 'true'">
     <MicrosoftDiagnosticsMonitoringLibraryVersion>$(MicrosoftDiagnosticsMonitoringShippedVersion)</MicrosoftDiagnosticsMonitoringLibraryVersion>
     <MicrosoftDiagnosticsMonitoringEventPipeLibraryVersion>$(MicrosoftDiagnosticsMonitoringShippedVersion)</MicrosoftDiagnosticsMonitoringEventPipeLibraryVersion>

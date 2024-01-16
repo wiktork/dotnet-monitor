@@ -1,0 +1,15 @@
+<Project>
+  <!-- Import references updated by Dependabot. -->
+  <PropertyGroup>
+    <!-- Microsoft.Extensions.Configuration.Abstractions -->
+    <MicrosoftExtensionsConfigurationAbstractions90Version>9.0.0</MicrosoftExtensionsConfigurationAbstractions90Version>
+    <!-- Microsoft.Extensions.Logging -->
+    <MicrosoftExtensionsLogging90Version>9.0.0</MicrosoftExtensionsLogging90Version>
+    <!-- Microsoft.Extensions.Logging.Abstractions -->
+    <MicrosoftExtensionsLoggingAbstractions90Version>9.0.0</MicrosoftExtensionsLoggingAbstractions90Version>
+    <!-- Microsoft.Extensions.Logging.Console -->
+    <MicrosoftExtensionsLoggingConsole90Version>9.0.0</MicrosoftExtensionsLoggingConsole90Version>
+    <!-- Microsoft.NETCore.App -->
+    <MicrosoftNETCoreApp90Version>9.0.0-alpha.1.24066.1</MicrosoftNETCoreApp90Version>
+  </PropertyGroup>
+</Project>

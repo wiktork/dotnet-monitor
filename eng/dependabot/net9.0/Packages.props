@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    Packages in this file have versions updated periodically by Dependabot specifically for .NET 9.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MicrosoftExtensionsConfigurationAbstractions90Version)" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLogging90Version)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractions90Version)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(MicrosoftExtensionsLoggingConsole90Version)" />
+    <PackageReference Include="Microsoft.NETCore.App.Runtime.win-x64" Version="$(MicrosoftNETCoreApp90Version)" />
+  </ItemGroup>
+</Project>
