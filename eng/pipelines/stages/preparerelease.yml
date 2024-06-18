@@ -59,6 +59,19 @@ stages:
             -ReleaseVersion "$(Build.BuildNumber)"
           workingDirectory: '$(Build.Repository.LocalPath)'
         continueOnError: true
+      - task: AzureCLI@2
+        displayName: 'Use WIF to obtain credentials for Azure CLI'
+        inputs:
+          azureSubscription: 'dotnetstage-dotnet-monitor-rw'
+          scriptType: pscore
+          scriptLocation: inlineScript
+          addSpnToEnvironment: true
+          inlineScript: |
+              echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$env:servicePrincipalId"
+              echo "##vso[task.setvariable variable=ARM_ID_TOKEN]$env:idToken"
+              echo "##vso[task.setvariable variable=ARM_TENANT_ID]$env:tenantId"
+      - script: az login --service-principal -u $(ARM_CLIENT_ID) --tenant $(ARM_TENANT_ID) --allow-no-subscriptions --federated-token $(ARM_ID_TOKEN)
+        displayName: 'Use az to authenticate using managed identity'
       - script: >-
           $(Build.SourcesDirectory)\dotnet.cmd run --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release
           --
@@ -69,8 +82,7 @@ stages:
           --release-name "$(Build.BuildNumber)"
           --build-version "$(BuildVersion)"
           --account-name "$(dotnet-diagnostics-storage-accountname)"
-          --account-key "$(dotnetstage-storage-key)"
-          --sas-valid-days "$(dotnet-diagnostics-storage-retentiondays)"
+          --client-id $(ARM_CLIENT_ID)
           -v True
         workingDirectory: '$(System.ArtifactsDirectory)\StagingToolLogs'
         displayName: 'Stage Build Assets and Manifest'
