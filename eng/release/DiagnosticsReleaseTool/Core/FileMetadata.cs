@@ -65,19 +65,18 @@ namespace ReleaseTool.Core
             Rid = rid;
         }
 
-        public static string GetDefaultCategoryForClass(FileClass fileClass) => fileClass switch
+        public static string GetDefaultCatgoryForClass(FileClass fileClass) => fileClass switch
         {
             FileClass.Blob => "BlobAssets",
             FileClass.Nuget => "NugetAssets",
             FileClass.SymbolPackage => "SymbolNugetAssets",
-            FileClass.Checksum => "ChecksumAssets",
             FileClass.Unknown => "UnknownAssets",
             _ => "UnknownAssets"
         };
 
         public override string ToString()
         {
-            return $"Class: {Class}, Category: {AssetCategory}, CDN: {ShouldPublishToCdn}, RID: {Rid}, Sha512: {Sha512}";
+            return $"Class: {Class}, Category: {AssetCategory}, CDN: {ShouldPublishToCdn}, RID: {Rid}";
         }
     }
 }
