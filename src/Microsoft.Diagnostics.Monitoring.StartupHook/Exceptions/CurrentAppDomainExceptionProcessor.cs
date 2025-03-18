@@ -14,10 +14,10 @@ namespace Microsoft.Diagnostics.Monitoring.StartupHook.Exceptions
         private readonly ExceptionIdSource _idSource = new();
 
         private readonly CurrentAppDomainFirstChanceExceptionSource _firstChanceSource;
-        private readonly ExceptionPipeline _firstChancePipeline;
+        private ExceptionPipeline _firstChancePipeline;
 
         private readonly CurrentAppDomainUnhandledExceptionSource _unhandledSource;
-        private readonly ExceptionPipeline _unhandledPipeline;
+        private ExceptionPipeline _unhandledPipeline;
 
         private readonly bool _includeMonitorExceptions;
 
@@ -34,8 +34,29 @@ namespace Microsoft.Diagnostics.Monitoring.StartupHook.Exceptions
 
         public void Start()
         {
+            _firstChanceSource.Start();
+            _unhandledSource.Start();
             _firstChancePipeline.Start();
             _unhandledPipeline.Start();
+        }
+
+        public void Restart()
+        {
+            // Stop all exception flow from the sources. This will allow draining the pipelines.
+            _firstChanceSource.Stop();
+            _unhandledSource.Stop();
+
+            // Drain synchronously
+            _firstChancePipeline.Restart();
+            _unhandledPipeline.Restart();
+
+            _firstChancePipeline = new(_firstChanceSource, ConfigureFirstChancePipeline);
+            _firstChancePipeline.Start();
+            _firstChanceSource.Start();
+
+            _unhandledPipeline = new(_unhandledSource, ConfigureUnhandledPipeline);
+            _unhandledPipeline.Start();
+            _unhandledSource.Start();
         }
 
         private void ConfigureFirstChancePipeline(ExceptionPipelineBuilder builder)

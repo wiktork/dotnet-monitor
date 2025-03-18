@@ -51,15 +51,15 @@ namespace Microsoft.Diagnostics.Monitoring.StartupHook.MonitorMessageDispatcher
 
             try
             {
-                if (bufferSize == 0)
-                {
-                    throw new ArgumentException(nameof(bufferSize));
-                }
+                //if (bufferSize == 0)
+                //{
+                //    throw new ArgumentException(nameof(bufferSize));
+                //}
 
-                if (nativeBuffer == IntPtr.Zero)
-                {
-                    throw new ArgumentException(nameof(nativeBuffer));
-                }
+                //if (nativeBuffer == IntPtr.Zero)
+                //{
+                //    throw new ArgumentException(nameof(nativeBuffer));
+                //}
 
                 RaiseMonitorMessage(new MonitorMessageArgs(command, nativeBuffer, bufferSize));
             }
