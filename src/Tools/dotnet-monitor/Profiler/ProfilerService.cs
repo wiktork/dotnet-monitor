@@ -74,6 +74,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Profiler
 
                 Dictionary<string, string> env = await client.GetProcessEnvironmentAsync(cancellationToken);
 
+                // [Done, startuphook ensures singleton] Double check startup hook as well.
+                // TODO Can we detect that dotnet-monitor dropped and shutdown instead of cleaning up on reconnect?
+                //TODO How do stop session on eventSource that's still lingering from a previous session?
+                // TODO Reset event might need to happen BEFORE we establish an eventSource listener. Otherwise drain will likely
+                // spill data into the new session (since EventSource is a singleton).
+                // TODO Configuration changes across dotnet-monitor may not be respected if profiler feature are already installed
+                // For example, parameter capture is on, but new config says it's off.
+
 
 
                 if (env.TryGetValue(ProfilerIdentifiers.EnvironmentVariables.RuntimeInstanceId, out string? runtimeInstanceId))
