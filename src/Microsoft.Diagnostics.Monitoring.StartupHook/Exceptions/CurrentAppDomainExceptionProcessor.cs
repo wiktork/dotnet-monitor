@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Monitoring.StartupHook.Exceptions
             _firstChancePipeline = new(_firstChanceSource, ConfigureFirstChancePipeline);
             _firstChancePipeline.Start();
             _firstChanceSource.Start();
-
+            System.Threading.Thread.Sleep(5000);
             _unhandledPipeline = new(_unhandledSource, ConfigureUnhandledPipeline);
             _unhandledPipeline.Start();
             _unhandledSource.Start();

@@ -3,6 +3,7 @@
 
 #include "CommandServer.h"
 #include <thread>
+#include <chrono>
 #include "Logging/Logger.h"
 
 CommandServer::CommandServer(const std::shared_ptr<ILogger>& logger, ICorProfilerInfo12* profilerInfo) :
@@ -97,10 +98,9 @@ void CommandServer::ListeningThread()
             doEnqueueMessage = false;
         }
 
-
         bool resetCommand = false;
 
-        if ((message.CommandSet == CommandSet::StartupHook) && (message.Command == 2))
+        if ((message.CommandSet == static_cast<short>(CommandSet::StartupHook)) && (message.Command == 2))
         {
             // This is a shutdown command, we need to shutdown the server.
             resetCommand = true;
@@ -123,8 +123,13 @@ void CommandServer::ListeningThread()
 
         if (resetCommand)
         {
+            auto start = std::chrono::high_resolution_clock::now();
+            _logger->Log(LogLevel::Information, _LS("BeginDrain operation"));
             _unmanagedOnlyQueue.Drain();
             _clientQueue.Drain();
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration = end - start;
+            _logger->Log(LogLevel::Information, _LS("Drain operation complete, duration: %f seconds"), duration.count());
         }
         *reinterpret_cast<HRESULT*>(response.Payload.data()) = hr;
         hr = client->Send(response);
@@ -140,8 +145,6 @@ void CommandServer::ListeningThread()
             _logger->Log(LogLevel::Warning, _LS("Unexpected error during shutdown: 0x%08x"), hr);
             // Not fatal, keep processing the message
         }
-
-        
     }
 }
 
@@ -166,6 +169,8 @@ void CommandServer::ClientProcessingThread()
         }
 
         // DispatchMessage in the callback serializes all callbacks.
+        // TODO Need to wait for this callback to finish entirely
+        // TODO Need to figure out if parameter capture reset and stack are synchronized on the queue.
         hr = _callback(message);
         if (hr != S_OK)
         {
