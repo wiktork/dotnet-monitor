@@ -97,20 +97,13 @@ void CommandServer::ListeningThread()
             doEnqueueMessage = false;
         }
 
-        *reinterpret_cast<HRESULT*>(response.Payload.data()) = hr;
 
-        hr = client->Send(response);
-        if (FAILED(hr))
-        {
-            _logger->Log(LogLevel::Error, _LS("Unexpected error when sending data: 0x%08x"), hr);
-            doEnqueueMessage = false;
-        }
+        bool resetCommand = false;
 
-        hr = client->Shutdown();
-        if (FAILED(hr))
+        if ((message.CommandSet == CommandSet::StartupHook) && (message.Command == 2))
         {
-            _logger->Log(LogLevel::Warning, _LS("Unexpected error during shutdown: 0x%08x"), hr);
-            // Not fatal, keep processing the message
+            // This is a shutdown command, we need to shutdown the server.
+            resetCommand = true;
         }
 
         if (doEnqueueMessage)
@@ -125,6 +118,30 @@ void CommandServer::ListeningThread()
                 _clientQueue.Enqueue(message);
             }
         }
+
+        // Reset command is special. We wait for everything to be processed.
+
+        if (resetCommand)
+        {
+            _unmanagedOnlyQueue.Drain();
+            _clientQueue.Drain();
+        }
+        *reinterpret_cast<HRESULT*>(response.Payload.data()) = hr;
+        hr = client->Send(response);
+        if (FAILED(hr))
+        {
+            _logger->Log(LogLevel::Error, _LS("Unexpected error when sending data: 0x%08x"), hr);
+            doEnqueueMessage = false;
+        }
+
+        hr = client->Shutdown();
+        if (FAILED(hr))
+        {
+            _logger->Log(LogLevel::Warning, _LS("Unexpected error during shutdown: 0x%08x"), hr);
+            // Not fatal, keep processing the message
+        }
+
+        
     }
 }
 

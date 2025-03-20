@@ -42,6 +42,13 @@ public:
         return E_FAIL;
     }
 
+    // Special function that synchronously waits for the queue to be finished. This is useful for cleanup operations.
+    void Drain()
+    {
+        std::unique_lock<std::mutex> lock(_mutex);
+        _condition.wait(lock, [this]() { return _queue.empty() || _complete; });
+    }
+
     void Complete()
     {
         {
