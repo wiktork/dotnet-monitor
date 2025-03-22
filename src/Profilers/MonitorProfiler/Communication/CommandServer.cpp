@@ -135,7 +135,7 @@ void CommandServer::ListeningThread()
             _unmanagedOnlyQueue.Drain();
             _clientQueue.Drain();
 
-            promise->get_future().wait();
+            hr = promise->get_future().get();
 
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration = end - start;
