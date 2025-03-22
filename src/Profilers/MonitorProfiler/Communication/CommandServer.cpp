@@ -78,10 +78,10 @@ void CommandServer::ListeningThread()
             break;
         }
 
-        IpcMessage message;
+        CallbackInfo info;
 
         //Note this can timeout if the client doesn't send anything
-        hr = client->Receive(message);
+        hr = client->Receive(info.Message);
         if (FAILED(hr))
         {
             _logger->Log(LogLevel::Error, _LS("Unexpected error when receiving data: 0x%08x"), hr);
@@ -91,16 +91,17 @@ void CommandServer::ListeningThread()
         }
 
         bool doEnqueueMessage = true;
-        hr = _validateMessageCallback(message);
+        hr = _validateMessageCallback(info.Message);
         if (FAILED(hr))
         {
             _logger->Log(LogLevel::Error, _LS("Failed to validate message: 0x%08x"), hr);
             doEnqueueMessage = false;
         }
 
+        std::shared_ptr<std::promise<HRESULT>> promise;
         bool resetCommand = false;
 
-        if ((message.CommandSet == static_cast<short>(CommandSet::StartupHook)) && (message.Command == 2))
+        if ((info.Message.CommandSet == static_cast<short>(CommandSet::StartupHook)) && (info.Message.Command == 2))
         {
             // This is a shutdown command, we need to shutdown the server.
             resetCommand = true;
@@ -108,14 +109,20 @@ void CommandServer::ListeningThread()
 
         if (doEnqueueMessage)
         {
-            bool unmanagedOnly = false;
-            if (SUCCEEDED(_unmanagedOnlyCallback(message.CommandSet, unmanagedOnly)) && unmanagedOnly)
+            if (resetCommand)
             {
-                _unmanagedOnlyQueue.Enqueue(message);
+                promise = std::make_shared<std::promise<HRESULT>>();
+                info.Promise = promise;
+            }
+
+            bool unmanagedOnly = false;
+            if (SUCCEEDED(_unmanagedOnlyCallback(info.Message.CommandSet, unmanagedOnly)) && unmanagedOnly)
+            {
+                _unmanagedOnlyQueue.Enqueue(info);
             }
             else
             {
-                _clientQueue.Enqueue(message);
+                _clientQueue.Enqueue(info);
             }
         }
 
@@ -127,6 +134,9 @@ void CommandServer::ListeningThread()
             _logger->Log(LogLevel::Information, _LS("BeginDrain operation"));
             _unmanagedOnlyQueue.Drain();
             _clientQueue.Drain();
+
+            promise->get_future().wait();
+
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration = end - start;
             _logger->Log(LogLevel::Information, _LS("Drain operation complete, duration: %f seconds"), duration.count());
@@ -160,8 +170,8 @@ void CommandServer::ClientProcessingThread()
 
     while (true)
     {
-        IpcMessage message;
-        hr = _clientQueue.BlockingDequeue(message);
+        CallbackInfo info;
+        hr = _clientQueue.BlockingDequeue(info);
         if (hr != S_OK)
         {
             //We are complete, discard all messages
@@ -171,10 +181,15 @@ void CommandServer::ClientProcessingThread()
         // DispatchMessage in the callback serializes all callbacks.
         // TODO Need to wait for this callback to finish entirely
         // TODO Need to figure out if parameter capture reset and stack are synchronized on the queue.
-        hr = _callback(message);
+        hr = _callback(info.Message);
         if (hr != S_OK)
         {
             _logger->Log(LogLevel::Warning, _LS("IpcMessage callback failed: 0x%08x"), hr);
+        }
+
+        if (info.Promise)
+        {
+            info.Promise->set_value(hr);
         }
     }
 }
@@ -191,18 +206,23 @@ void CommandServer::UnmanagedOnlyProcessingThread()
 
     while (true)
     {
-        IpcMessage message;
-        hr = _unmanagedOnlyQueue.BlockingDequeue(message);
+        CallbackInfo info;
+        hr = _unmanagedOnlyQueue.BlockingDequeue(info);
         if (hr != S_OK)
         {
             // We are complete, discard all messages
             break;
         }
 
-        hr = _callback(message);
+        hr = _callback(info.Message);
         if (hr != S_OK)
         {
             _logger->Log(LogLevel::Warning, _LS("IpcMessage callback failed: 0x%08x"), hr);
+        }
+
+        if (info.Promise)
+        {
+            info.Promise->set_value(hr);
         }
     }
 }
