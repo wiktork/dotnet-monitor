@@ -40,6 +40,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Profiler
         private readonly ProfilerChannel _profilerChannel;
 
         private readonly TimeSpan AttachTimeout = TimeSpan.FromSeconds(10);
+        private readonly TimeSpan ResetTimeout = TimeSpan.FromSeconds(20);
 
         public ProfilerService(
             ISharedLibraryService sharedLibraryService,
@@ -77,12 +78,27 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Profiler
                 // TODO Ideally we would detect that dotnet-monitor was disconnected and cleanup inproc collection
                 // TODO Configuration changes across dotnet-monitor may not be respected if profiler feature are already installed
                 // For example, parameter capture is on, but new config says it's off.
-
+                
                 if (env.TryGetValue(ProfilerIdentifiers.EnvironmentVariables.RuntimeInstanceId, out string? runtimeInstanceId))
                 {
                     // Profiler already applied. We will reset state to discard all previous data collection.
+                    using CancellationTokenSource timeoutSource = new CancellationTokenSource(ResetTimeout);
+                    using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutSource.Token);
+                    byte[] results = await _profilerChannel.SendMessageCore(endpointInfo, new JsonProfilerMessage((ushort)CommandSet.Profiler, (ushort)ProfilerCommand.ResetState, new EmptyPayload()), linkedSource.Token);
 
-                    await _profilerChannel.SendMessage(endpointInfo, new JsonProfilerMessage(StartupHookCommand.ResetState, new EmptyPayload()), cancellationToken);
+                    if (results == null || results.Length != sizeof(int) * 4)
+                    {
+                        throw new InvalidOperationException("Unexpected payload size of Reset message");
+                    }
+
+                    List<int> hresults = new();
+                    for (int i = 0; i < results.Length; i += sizeof(int))
+                    {
+                        hresults.Add(BitConverter.ToInt32(results, i));
+                    }
+
+                    ThrowForHResults(hresults);
+
                     return;
                 }
 
@@ -286,6 +302,27 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Profiler
                     clsid,
                     physicalPath,
                     cancellationToken);
+            }
+        }
+
+        private static void ThrowForHResults(IEnumerable<int> hresults)
+        {
+            List<Exception> exceptions = new();
+            foreach (int hr in hresults)
+            {
+                Exception? exception = Marshal.GetExceptionForHR(hr);
+                if (exception != null)
+                {
+                    exceptions.Add(exception);
+                }
+            }
+            if (exceptions.Count > 1)
+            {
+                throw new AggregateException(exceptions);
+            }
+            if (exceptions.Count == 1)
+            {
+                throw exceptions[0];
             }
         }
     }

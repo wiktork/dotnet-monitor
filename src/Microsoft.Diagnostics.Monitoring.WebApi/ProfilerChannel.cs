@@ -29,6 +29,16 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
 
         public async Task SendMessage(IEndpointInfo endpointInfo, IProfilerMessage message, CancellationToken token)
         {
+            byte[] payload = await SendMessageCore(endpointInfo, message, token);
+            if (payload.Length == sizeof(int))
+            {
+                Marshal.ThrowExceptionForHR(BitConverter.ToInt32(payload));
+            }
+
+        }
+
+        public async Task<byte[]> SendMessageCore(IEndpointInfo endpointInfo, IProfilerMessage message, CancellationToken token)
+        {
             if (message.Payload.Length > MaxPayloadSize)
             {
                 throw new ArgumentException(
@@ -62,11 +72,10 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
                 await socket.SendAsync(new ReadOnlyMemory<byte>(message.Payload), SocketFlags.None, token);
             }
 
-            int hresult = await ReceiveStatusMessageAsync(socket, token);
-            Marshal.ThrowExceptionForHR(hresult);
+            return await ReceiveStatusMessageAsync(socket, token);
         }
 
-        private static async Task<int> ReceiveStatusMessageAsync(Socket socket, CancellationToken token)
+        private static async Task<byte[]> ReceiveStatusMessageAsync(Socket socket, CancellationToken token)
         {
             byte[] headersBuffer = new byte[sizeof(ushort) + sizeof(ushort) + sizeof(int)];
             int received = await socket.ReceiveAsync(new Memory<byte>(headersBuffer), SocketFlags.None, token);
@@ -88,7 +97,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
             ushort command = BitConverter.ToUInt16(headersBuffer, startIndex: headerOffset);
             headerOffset += sizeof(ushort);
 
-            if (command != (ushort)ServerResponseCommand.Status)
+            if (command != (ushort)ServerResponseCommand.Status && (command != (ushort)ServerResponseCommand.ResetStatus))
             {
                 throw new InvalidOperationException("Received unexpected command from server.");
             }
@@ -102,11 +111,12 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
             // End of header, headerOffset should not be used after this point
             //
 
-            byte[] payloadBuffer = new byte[sizeof(int)];
-            if (payloadSize != payloadBuffer.Length)
+            // We are restrictive on the payload size here
+            if (payloadSize != sizeof(int) && payloadSize != sizeof(int) * 4)
             {
                 throw new InvalidOperationException("Received unexpected payload size from server.");
             }
+            byte[] payloadBuffer = new byte[payloadSize];
 
             received = await socket.ReceiveAsync(new Memory<byte>(payloadBuffer), SocketFlags.None, token);
             if (received < payloadBuffer.Length)
@@ -114,7 +124,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi
                 throw new InvalidOperationException("Could not receive message payload from server.");
             }
 
-            return BitConverter.ToInt32(payloadBuffer);
+            return payloadBuffer;
         }
 
         private string ComputeChannelPath(IEndpointInfo endpointInfo)

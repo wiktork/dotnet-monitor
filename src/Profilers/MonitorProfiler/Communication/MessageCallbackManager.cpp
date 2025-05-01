@@ -41,7 +41,7 @@ HRESULT MessageCallbackManager::DispatchMessage(const IpcMessage& message)
     std::function<HRESULT (const IpcMessage& message)> callback;
     if (!TryGetCallback(message.CommandSet, callback))
     {
-        return E_FAIL;
+        return E_NOTIMPL;
     }
 
     return callback(message);

@@ -138,13 +138,16 @@ void CommandServer::ProcessResetMessage(const IpcMessage& message, std::shared_p
 {
     IpcMessage response;
     response.CommandSet = static_cast<unsigned short>(CommandSet::ServerResponse);
-    response.Command = static_cast<unsigned short>(ServerResponseCommand::Status);
-    response.Payload.resize(sizeof(HRESULT));
+    response.Command = static_cast<unsigned short>(ServerResponseCommand::ResetStatus);
+    response.Payload.resize(sizeof(HRESULT) * 4);
 
-    HRESULT hr = S_OK;
+    HRESULT hrManagedStop = S_OK;
+    HRESULT hrNativeStop = S_OK;
+    HRESULT hrManagedStart = S_OK;
+    HRESULT hrNativeStart = S_OK;
 
-    if ((message.CommandSet == static_cast<unsigned short>(CommandSet::StartupHook)) &&
-        (message.Command == static_cast<unsigned short>(StartupHookCommand::Stop) || message.Command == static_cast<unsigned short>(StartupHookCommand::ResetState)))
+    if ((message.CommandSet == static_cast<unsigned short>(CommandSet::Profiler)) &&
+        (message.Command == static_cast<unsigned short>(ProfilerCommand::Stop) || message.Command == static_cast<unsigned short>(ProfilerCommand::ResetState)))
     {
         CallbackInfo managedCallbackInfo;
         CallbackInfo nativeCallbackInfo;
@@ -155,19 +158,12 @@ void CommandServer::ProcessResetMessage(const IpcMessage& message, std::shared_p
         _clientQueue.Enqueue(managedCallbackInfo);
         _unmanagedOnlyQueue.Enqueue(nativeCallbackInfo);
 
-        HRESULT hrManaged = managedCallbackInfo.Promise->get_future().get();
-        HRESULT hrNative = nativeCallbackInfo.Promise->get_future().get();
-
-        //TODO We really should report both errors, but realistically only hrManaged will be set.
-
-        hr = FAILED(hrManaged) ? hrManaged : FAILED(hrNative) ? hrNative : S_OK;
+        hrManagedStop = managedCallbackInfo.Promise->get_future().get();
+        hrNativeStop = nativeCallbackInfo.Promise->get_future().get();
     }
 
-    //TODO Reset requests are a combination of Stop/Start. Currently we issue both commands even if Stop fails.
-    // We should report all the possible error codes to the client.
-
-    if ((message.CommandSet == static_cast<unsigned short>(CommandSet::StartupHook)) &&
-        (message.Command == static_cast<unsigned short>(StartupHookCommand::Start) || message.Command == static_cast<unsigned short>(StartupHookCommand::ResetState)))
+    if ((message.CommandSet == static_cast<unsigned short>(CommandSet::Profiler)) &&
+        (message.Command == static_cast<unsigned short>(ProfilerCommand::Start) || message.Command == static_cast<unsigned short>(ProfilerCommand::ResetState)))
     {
         CallbackInfo managedCallbackInfo;
         CallbackInfo nativeCallbackInfo;
@@ -178,16 +174,14 @@ void CommandServer::ProcessResetMessage(const IpcMessage& message, std::shared_p
         _clientQueue.Enqueue(managedCallbackInfo);
         _unmanagedOnlyQueue.Enqueue(nativeCallbackInfo);
 
-        HRESULT hrManaged = managedCallbackInfo.Promise->get_future().get();
-        HRESULT hrNative = nativeCallbackInfo.Promise->get_future().get();
-
-        if (SUCCEEDED(hr))
-        {
-            hr = FAILED(hrManaged) ? hrManaged : FAILED(hrNative) ? hrNative : S_OK;
-        }
+        hrManagedStart = managedCallbackInfo.Promise->get_future().get();
+        hrNativeStart = nativeCallbackInfo.Promise->get_future().get();
     }
 
     *reinterpret_cast<HRESULT*>(response.Payload.data()) = hr;
+    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT)) = hr;
+    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT) * 2) = hr;
+    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT) * 3) = hr;
     SendMessage(client, response);
     Shutdown(client);
 }

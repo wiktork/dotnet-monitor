@@ -21,7 +21,8 @@ namespace Microsoft.Diagnostics.Monitoring
 
     public enum ServerResponseCommand : ushort
     {
-        Status
+        Status,
+        ResetStatus
     };
 
     public enum ProfilerCommand : ushort
@@ -29,6 +30,7 @@ namespace Microsoft.Diagnostics.Monitoring
         Callstack,
         Stop,
         Start,
+        ResetState
     };
 
     public enum StartupHookCommand : ushort
@@ -37,7 +39,6 @@ namespace Microsoft.Diagnostics.Monitoring
         StopCapturingParameters,
         Stop,
         Start,
-        ResetState
     };
 
     public interface IProfilerMessage

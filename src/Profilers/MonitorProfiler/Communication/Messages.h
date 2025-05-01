@@ -16,6 +16,13 @@ enum class ProfilerCommand : unsigned short
     // Indicate that collection should resume again
     // Currently a no-op
     Start,
+
+    // This is a 'meta' command. It effectively converts to the following commmand sequence:
+    // Profiler::Stop
+    // StartupHook::Stop
+    // Profiler::Start
+    // StartupHook::Start
+    ResetState
 };
 
 enum class StartupHookCommand : unsigned short
@@ -31,18 +38,12 @@ enum class StartupHookCommand : unsigned short
     // Indicates that all collection should start
     // Reconnects exception handler events
     Start,
-
-    // This is a 'meta' command. It effectively converts to the following commmand sequence:
-    // Profiler::Stop
-    // StartupHook::Stop
-    // Profiler::Start
-    // StartupHook::Start
-    ResetState
 };
 
 enum class ServerResponseCommand : unsigned short
 {
-    Status
+    Status,
+    ResetStatus
 };
 
 //
@@ -53,7 +54,7 @@ enum class CommandSet : unsigned short
 {
     ServerResponse,
     Profiler,
-    StartupHook
+    StartupHook,
 };
 
 struct IpcMessage
