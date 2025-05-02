@@ -178,10 +178,10 @@ void CommandServer::ProcessResetMessage(const IpcMessage& message, std::shared_p
         hrNativeStart = nativeCallbackInfo.Promise->get_future().get();
     }
 
-    *reinterpret_cast<HRESULT*>(response.Payload.data()) = hr;
-    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT)) = hr;
-    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT) * 2) = hr;
-    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT) * 3) = hr;
+    *reinterpret_cast<HRESULT*>(response.Payload.data()) = hrNativeStop;
+    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT)) = hrNativeStop;
+    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT) * 2) = hrManagedStart;
+    *reinterpret_cast<HRESULT*>(response.Payload.data() + sizeof(HRESULT) * 3) = hrManagedStart;
     SendMessage(client, response);
     Shutdown(client);
 }
@@ -189,9 +189,10 @@ void CommandServer::ProcessResetMessage(const IpcMessage& message, std::shared_p
 bool CommandServer::IsControlCommand(const IpcMessage& message)
 {
     switch (message.CommandSet) {
-        case static_cast<int>(CommandSet::Profiler) :
+        case static_cast<int>(CommandSet::Profiler):
             switch (message.Command)
             {
+                case static_cast<int>(ProfilerCommand::ResetState):
                 case static_cast<int>(ProfilerCommand::Start):
                 case static_cast<int>(ProfilerCommand::Stop):
                     return true;
@@ -200,7 +201,6 @@ bool CommandServer::IsControlCommand(const IpcMessage& message)
             }
         case static_cast<int>(CommandSet::StartupHook):
             switch (message.Command) {
-                case static_cast<int>(StartupHookCommand::ResetState):
                 case static_cast<int>(StartupHookCommand::Start):
                 case static_cast<int>(StartupHookCommand::Stop):
                     return true;
