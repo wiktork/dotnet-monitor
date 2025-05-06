@@ -913,16 +913,30 @@ namespace Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests
             appRunner.SubScenarioName = TestAppScenarios.Exceptions.SubScenarios.MultiPhase;
             appRunner.EnableMonitorStartupHook = true;
 
+            var expectedException = new ExceptionInstance
+            {
+                Message = ExceptionMessage,
+                TypeName = SystemInvalidOperationException,
+                ModuleName = CoreLibModuleName,
+                CallStack = new()
+                {
+                    Frames =
+                        [
+                            new()
+                            {
+                                TypeName = FrameTypeName,
+                                ModuleName = UnitTestAppModule,
+                                MethodName = FrameMethodName,
+                                FullParameterTypes = [FrameParameterType, FrameParameterType]
+                            },
+                        ]
+                }
+            };
+
             await appRunner.ExecuteAsync(async () =>
             {
-                await GetExceptions(apiClient, appRunner, ExceptionFormat.PlainText);
-
-                ValidateSingleExceptionText(
-                    SystemInvalidOperationException,
-                    ExceptionMessage,
-                    FrameTypeName,
-                    FrameMethodName,
-                    new List<string> { SimpleFrameParameterType, SimpleFrameParameterType });
+                await GetExceptions(apiClient, appRunner, ExceptionFormat.NewlineDelimitedJson);
+                ExceptionInstance firstException = ValidateSingleExceptionJson(expectedException);
 
                 await firstRunner.StopAsync();
                 await firstRunner.DisposeAsync();
@@ -939,14 +953,11 @@ namespace Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests
 
                 _ = await secondApiClient.GetProcessWithRetryAsync(_outputHelper, pid: appPid);
                    
-                await GetExceptions(secondApiClient, appRunner, ExceptionFormat.PlainText);
+                await GetExceptions(secondApiClient, appRunner, ExceptionFormat.NewlineDelimitedJson);
+                ExceptionInstance secondException = ValidateSingleExceptionJson(expectedException);
 
-                ValidateSingleExceptionText(
-                    SystemInvalidOperationException,
-                    ExceptionMessage,
-                    FrameTypeName,
-                    FrameMethodName,
-                    new List<string> { SimpleFrameParameterType, SimpleFrameParameterType });
+                Assert.Equal(firstException.Id, secondException.Id);
+
             });
         }
 
@@ -983,7 +994,7 @@ namespace Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests
             }
         }
 
-        private void ValidateSingleExceptionJson(ExceptionInstance expectedException, bool onlyMatchTopFrames = true)
+        private ExceptionInstance ValidateSingleExceptionJson(ExceptionInstance expectedException, bool onlyMatchTopFrames = true)
         {
             List<ExceptionInstance> exceptions = DeserializeJsonExceptions();
             ExceptionInstance exception = Assert.Single(exceptions);
@@ -997,7 +1008,7 @@ namespace Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests
             if (expectedException.CallStack == null)
             {
                 Assert.Null(exception.CallStack);
-                return;
+                return exception;
             }
 
             Assert.NotNull(exception.CallStack);
@@ -1027,6 +1038,8 @@ namespace Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests
                 Assert.Equal(expectedFrame.FullParameterTypes ?? [], actualFrame.FullParameterTypes ?? []);
                 Assert.Equal(expectedFrame.Hidden, actualFrame.Hidden);
             }
+
+            return exception;
         }
 
         private void ValidateSingleExceptionText(string exceptionType, string exceptionMessage, string frameTypeName, string frameMethodName, List<string> parameterTypes)

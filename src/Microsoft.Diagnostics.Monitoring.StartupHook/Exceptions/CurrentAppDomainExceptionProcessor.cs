@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Monitoring.StartupHook.Exceptions
     internal sealed class CurrentAppDomainExceptionProcessor : IDisposable
     {
         private readonly ExceptionsEventSource _eventSource = new();
-        private readonly ExceptionIdSource _idSource = new();
+        private ExceptionIdSource _idSource = new();
 
         private readonly CurrentAppDomainFirstChanceExceptionSource _firstChanceSource;
         private ExceptionPipeline _firstChancePipeline;
@@ -48,6 +48,9 @@ namespace Microsoft.Diagnostics.Monitoring.StartupHook.Exceptions
             _unhandledSource.Stop();
             _firstChancePipeline.Stop();
             _unhandledPipeline.Stop();
+
+            // Reset the id's
+            _idSource = new ExceptionIdSource();
 
             // We reset the pipelines entirely to allow their cache to be cleared
             _firstChancePipeline = new(_firstChanceSource, ConfigureFirstChancePipeline);
