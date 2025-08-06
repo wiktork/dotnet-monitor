@@ -27,138 +27,11 @@ variables:
   # - We cannot checkout the source code
   #   - All powershell scripts were inlined in the pipeline.
   #   - Darc installation is done via tasks instead of darc-init.
-  # - We share scripts between the validation and publish stages as variables.
+  # - Common setup steps are shared between stages via YAML template.
 
   # Future improvements / TODO
-  # - Move the scripts into yaml template assuming the release job allows it
   # - Save the results of build version / release version from the validation job and use it in the release job
   # - Validate that dotnetcli can be used for checksums
-
-- name: GetBarIdScript
-  value: |
-    $ErrorActionPreference = 'Stop'
-    Set-StrictMode -Version 2.0
-    
-    $BuildId = "$(resources.pipeline.Build.runID)"
-    $TaskVariableName = 'BarId'
-    
-    if ([String]::IsNullOrEmpty($env:System_AccessToken)) {
-        Write-Error 'System access token missing, this script needs access.'
-    }
-    
-    $tagsUri = "${env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${env:SYSTEM_TEAMPROJECT}/_apis/build/builds/$BuildId/tags?api-version=6.0"
-    $buildData = Invoke-RestMethod `
-        -Uri $tagsUri `
-        -Method 'GET' `
-        -Headers @{ 'accept' = 'application/json'; 'Authorization' = "Bearer ${env:System_AccessToken}" }
-    
-    Write-Verbose 'BuildData:'
-    $buildDataJson = $buildData | ConvertTo-Json
-    Write-Verbose $buildDataJson
-    
-    $barId = -1;
-    $buildData.Value | Foreach-Object {
-        if ($_.StartsWith('BAR ID - ')) {
-            if ($barId -ne -1) {
-                Write-Error 'Multiple BAR IDs found in tags.'
-            }
-            $barId = $_.SubString(9)
-        }
-    }
-    
-    if ($barId -eq -1) {
-        Write-Error 'Failed to get BAR ID from tags.'
-    }
-    
-    Write-Verbose "BAR ID: $barId"
-    
-    Write-Host "##vso[task.setvariable variable=$TaskVariableName]$barId"
-    Write-Output $barId
-  readonly: true
-- name: GetReleaseVersionScript
-  value: |
-    $ErrorActionPreference = 'Stop'
-    Set-StrictMode -Version 2.0
-    
-    $BarId = "$(BarId)"
-    $TaskVariableName = 'ReleaseVersion'
-    
-    try {
-        # Use DARC tool to get build information
-        $darcPath = "$(Agent.ToolsDirectory)/darc/darc.exe"
-        
-        if (!(Test-Path $darcPath)) {
-            Write-Error "DARC tool not found at $darcPath"
-        }
-        
-        # Get build information using DARC
-        $buildInfo = & $darcPath get-build --id $BarId --output-format json --extended --ci
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "DARC get-build command failed with exit code $LASTEXITCODE"
-        }
-        
-        $buildData = $buildInfo | ConvertFrom-Json
-        
-        [array]$matchingData = $buildData.assets | Where-Object { $_.name -match '^dotnet-monitor$' }
-        
-        if (!$matchingData -or $matchingData.Length -ne 1) {
-            Write-Error 'Unable to obtain release version'
-        }
-        
-        $version = $matchingData[0].version
-        
-        Write-Host "Release Version: $version"
-        
-        Write-Host "##vso[task.setvariable variable=$TaskVariableName]$version"
-        Write-Output $version
-    }
-    catch {
-        Write-Error "Failed to get release version: $($_.Exception.Message)"
-        throw
-    }
-  readonly: true
-- name: GetBuildVersionScript
-  value: |
-    $ErrorActionPreference = 'Stop'
-    Set-StrictMode -Version 2.0
-    
-    $BarId = "$(BarId)"
-    $TaskVariableName = 'BuildVersion'
-    
-    try {
-        # Use DARC tool to get build information
-        $darcPath = "$(Agent.ToolsDirectory)/darc/darc.exe"
-        
-        if (!(Test-Path $darcPath)) {
-            Write-Error "DARC tool not found at $darcPath"
-        }
-        
-        # Get build information using DARC
-        $buildInfo = & $darcPath get-build --id $BarId --output-format json --extended --ci
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "DARC get-build command failed with exit code $LASTEXITCODE"
-        }
-        
-        $buildData = $buildInfo | ConvertFrom-Json
-        
-        [array]$matchingData = $buildData.assets | Where-Object { $_.name -match 'MergedManifest.xml$' -and $_.nonShipping }
-        
-        if (!$matchingData -or $matchingData.Length -ne 1) {
-            Write-Error 'Unable to obtain build version.'
-        }
-        
-        $version = $matchingData[0].version
-        
-        Write-Host "Build Version: $version"
-        
-        Write-Host "##vso[task.setvariable variable=$TaskVariableName]$version"
-        Write-Output $version
-    }
-    catch {
-        Write-Error "Failed to get build version: $($_.Exception.Message)"
-        throw
-    }
-  readonly: true
 
 resources:
   pipelines:
@@ -190,45 +63,7 @@ extends:
         steps:
         - download: none
 
-        - task: UseDotNet@2
-          displayName: Install .NET 9
-          inputs:
-            packageType: 'sdk'
-            version: '9.x'
-            installationPath: $(Agent.ToolsDirectory)/dotnet
-
-        - task: AzureCLI@2
-          displayName: Install DARC Tool
-          inputs:
-            azureSubscription: "Darc: Maestro Production"
-            scriptType: ps
-            scriptLocation: inlineScript
-            inlineScript: |
-              dotnet tool install microsoft.dotnet.darc --tool-path "$(Agent.ToolsDirectory)/darc" --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
-
-        - task: PowerShell@2
-          displayName: Get BAR ID
-          inputs:
-            targetType: 'inline'
-            script: $(GetBarIdScript)
-          env:
-            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-
-        - task: AzureCLI@2
-          displayName: Get Release Version
-          inputs:
-            azureSubscription: "Darc: Maestro Production"
-            scriptType: ps
-            scriptLocation: inlineScript
-            inlineScript: $(GetReleaseVersionScript)
-
-        - task: AzureCLI@2
-          displayName: Get Build Version
-          inputs:
-            azureSubscription: "Darc: Maestro Production"
-            scriptType: ps
-            scriptLocation: inlineScript
-            inlineScript: $(GetBuildVersionScript)
+        - template: /eng/pipelines/templates/setup-common-tools.yml
 
         - powershell: |
             $buildName = "${env:ReleaseVersion} [${env:BuildVersion}]"
@@ -279,21 +114,7 @@ extends:
               steps:
               - download: none
 
-              - task: UseDotNet@2
-                displayName: Install .NET 9
-                inputs:
-                  packageType: 'sdk'
-                  version: '9.x'
-                  installationPath: $(Agent.ToolsDirectory)/dotnet
-
-              - task: AzureCLI@2
-                displayName: Install DARC Tool
-                inputs:
-                  azureSubscription: "Darc: Maestro Production"
-                  scriptType: ps
-                  scriptLocation: inlineScript
-                  inlineScript: |
-                    dotnet tool install microsoft.dotnet.darc --tool-path "$(Agent.ToolsDirectory)/darc" --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
+              - template: /eng/pipelines/templates/setup-common-tools.yml
 
               - task: PowerShell@2
                 displayName: Install AzCopy
@@ -340,30 +161,6 @@ extends:
                     
                     Write-Host "##vso[task.setvariable variable=$TaskVariableName]$azCopyPath"
                     Write-Output $azCopyPath
-
-              - task: PowerShell@2
-                displayName: Get BAR ID
-                inputs:
-                  targetType: 'inline'
-                  script: $(GetBarIdScript)
-                env:
-                  SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-
-              - task: AzureCLI@2
-                displayName: Get Release Version
-                inputs:
-                  azureSubscription: "Darc: Maestro Production"
-                  scriptType: ps
-                  scriptLocation: inlineScript
-                  inlineScript: $(GetReleaseVersionScript)
-
-              - task: AzureCLI@2
-                displayName: Get Build Version
-                inputs:
-                  azureSubscription: "Darc: Maestro Production"
-                  scriptType: ps
-                  scriptLocation: inlineScript
-                  inlineScript: $(GetBuildVersionScript)
 
               - powershell: Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
                 displayName: Install NuGet PowerShell Package Provider
