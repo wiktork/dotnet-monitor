@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>$(TestTargetFrameworks)</TargetFramework>
+    <TargetFramework>$(ToolTargetFramework)</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
