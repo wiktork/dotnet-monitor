@@ -36,7 +36,7 @@
   <Target Name="GenerateChecksumsForPackages">
     <ItemGroup>
       <!-- Generate checksums for non-symbols packages -->
-      <GenerateChecksumItems Include="@(PackageFile)" Condition="!$([System.String]::Copy(%(Filename)).Contains('symbols'))">
+  <GenerateChecksumItems Include="@(PackageFile)" Condition="!$([System.String]::new(%(Filename)).Contains('symbols'))">
         <DestinationPath>%(FullPath).sha512</DestinationPath>
       </GenerateChecksumItems>
     </ItemGroup>
