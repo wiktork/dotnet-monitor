@@ -41,8 +41,10 @@
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.WebApi\Microsoft.Diagnostics.Monitoring.WebApi.csproj" />
     <!-- This is a build-ordering dependency only - we don't want this hook to appear directly in the our referenced libraries, we
          need to customize it's layout. We _do_ however need to ensure that it _gets built_ before we build/publish. -->
+    <!-- Note: IntermediateOutputPath and OutputPath must be set to isolated paths to avoid race conditions with other projects
+         that reference StartupHook during parallel builds. Without this, both the obj and bin folders would conflict. -->
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.StartupHook\Microsoft.Diagnostics.Monitoring.StartupHook.csproj"
-      AdditionalProperties="RuntimeIdentifier=;PublishDir=$(StartupHookPublishPath)"
+      AdditionalProperties="RuntimeIdentifier=;PublishDir=$(StartupHookPublishPath);BaseIntermediateOutputPath=$(BaseIntermediateOutputPath)StartupHookRefPublish\;IntermediateOutputPath=$(BaseIntermediateOutputPath)StartupHookRefPublish\$(TargetFramework)\;OutputPath=$(ArtifactsBinDir)StartupHookRefPublish\$(Configuration)\$(TargetFramework)\"
       GlobalPropertiesToRemove="PublishSingleFile"
       Targets="Publish"
       ReferenceOutputAssembly="false" />

@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "binlog-mcp": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": ["C:\\Users\\wiktork\\Downloads\\baronfel.binlog.mcp.0.0.12 (1)\\tools\\net10.0\\any\\binlog.mcp.dll"]
+    }
+  }
+}
