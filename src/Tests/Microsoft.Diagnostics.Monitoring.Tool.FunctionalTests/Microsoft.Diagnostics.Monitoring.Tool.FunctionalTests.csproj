@@ -80,9 +80,18 @@
   </ItemGroup>
 
   <ItemGroup>
+
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.FileFormats" />
     <PackageReference Include="Microsoft.Identity.Web" />
+    <!-- See https://github.com/Azure/azure-sdk-for-net/pull/54590
+    Azure.Core and Microsoft.Identity.Web dependencies now pull .NET 10 packages
+    even for .NET 8 targets.
+    This is the minimum overrides required to prevent package downgrades
+    due to transitive dependencies
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="10.0.2" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageReference Include="System.Text.Json" VersionOverride="10.0.1" Condition="'$(TargetFramework)' == 'net8.0'" />
+  -->
   </ItemGroup>
 
   <ItemGroup>
