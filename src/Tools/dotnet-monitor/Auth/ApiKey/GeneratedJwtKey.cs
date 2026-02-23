@@ -8,7 +8,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Microsoft.Diagnostics.Tools.Monitor.Auth.ApiKey
 {
@@ -54,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Auth.ApiKey
             ECDsa pubDsa = ECDsa.Create(dsa.ExportParameters(includePrivateParameters: false));
             ECDsaSecurityKey pubSecKey = new ECDsaSecurityKey(pubDsa);
             JsonWebKey jwk = JsonWebKeyConverter.ConvertFromECDsaSecurityKey(pubSecKey);
-            string publicKeyJson = JsonSerializer.Serialize(jwk, new JsonSerializerOptions() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
+            string publicKeyJson = JsonSerializer.Serialize(jwk, JwtKeySerializerContext.Default.JsonWebKey);
             string publicKeyEncoded = Base64UrlEncoder.Encode(publicKeyJson);
 
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();

@@ -5,6 +5,7 @@ using Microsoft.Diagnostics.Tools.Monitor.CollectionRules.Options.Actions;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -119,6 +120,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             return true;
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2075:Value passed to a method parameter annotated with 'DynamicallyAccessedMembersAttribute' does not satisfy the same requirements.", Justification = "Options types are preserved by the application.")]
         public static IEnumerable<PropertyInfo> GetPropertiesFromSettings(object? settings, Predicate<PropertyInfo>? predicate = null) =>
             settings?.GetType()
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)

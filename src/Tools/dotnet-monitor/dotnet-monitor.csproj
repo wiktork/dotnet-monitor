@@ -19,7 +19,10 @@
     <!-- Suppress trim analysis warnings until the codebase is fully trim-annotated.
          In .NET 9+ SuppressTrimAnalysisWarnings defaults to false when PublishTrimmed is set,
          which combined with TreatWarningsAsErrors causes IL2026/IL2075/IL2091 build failures. -->
-    <SuppressTrimAnalysisWarnings Condition="'$(CustomIsPacking)' == 'true'">true</SuppressTrimAnalysisWarnings>
+    <!--<SuppressTrimAnalysisWarnings Condition="'$(CustomIsPacking)' == 'true'">true</SuppressTrimAnalysisWarnings>-->
+    <!-- IL2104 warnings come from external NuGet packages that are not trim-annotated.
+         These cannot be fixed in this repository, so suppress IL2104 only. -->
+    <NoWarn Condition="'$(CustomIsPacking)' == 'true'">$(NoWarn);IL2104</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

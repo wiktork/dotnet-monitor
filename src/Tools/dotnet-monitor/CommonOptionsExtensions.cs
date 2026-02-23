@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
@@ -94,6 +95,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2075:Value passed to a method parameter annotated with 'DynamicallyAccessedMembersAttribute' does not satisfy the same requirements.", Justification = "Options types are preserved by the application.")]
         private static void MapObject(object obj, string prefix, string separator, IDictionary<string, string> map)
         {
             foreach (PropertyInfo property in obj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))

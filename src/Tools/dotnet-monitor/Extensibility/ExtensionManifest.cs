@@ -5,21 +5,16 @@
 
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Microsoft.Diagnostics.Tools.Monitor.Extensibility
 {
     internal class ExtensionManifest : IValidatableObject
     {
-        private static readonly JsonSerializerOptions _serializerOptions = new()
-        {
-            Converters = { new JsonStringEnumConverter() }
-        };
-
         public const string DefaultFileName = "extension.json";
 
         /// <summary>
@@ -37,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Extensibility
         public string ExecutableFileName { get; set; }
 
         /// <summary>
-        /// If specified, executes the extension using the shared .NET host (e.g. dotnet.exe) with the specified entry point assembly (without extension). 
+        /// If specified, executes the extension using the shared .NET host (e.g. dotnet.exe) with the specified entry point assembly (without extension).
         /// </summary>
         /// <remarks>
         /// Either <see cref="ExecutableFileName"/> or <see cref="AssemblyFileName"/> must be specified.
@@ -60,7 +55,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Extensibility
 
             try
             {
-                return JsonSerializer.Deserialize<ExtensionManifest>(stream, _serializerOptions);
+                return JsonSerializer.Deserialize<ExtensionManifest>(stream, ExtensionManifestSerializerContext.Default.ExtensionManifest);
             }
             catch (JsonException ex)
             {
@@ -70,6 +65,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Extensibility
             }
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "ExtensionManifest is preserved.")]
         public void Validate()
         {
             List<ValidationResult> results = new();

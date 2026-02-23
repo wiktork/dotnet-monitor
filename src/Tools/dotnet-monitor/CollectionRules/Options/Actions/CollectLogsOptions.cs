@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.CollectionRules.Options.Actions
         [Display(
             ResourceType = typeof(OptionsDisplayStrings),
             Description = nameof(OptionsDisplayStrings.DisplayAttributeDescription_CollectArtifactOptions_Duration))]
-        [Range(typeof(TimeSpan), ActionOptionsConstants.Duration_MinValue, ActionOptionsConstants.Duration_MaxValue)]
+        [TimeSpanRange(ActionOptionsConstants.Duration_MinValue, ActionOptionsConstants.Duration_MaxValue)]
         [DefaultValue(CollectLogsOptionsDefaults.Duration)]
         public TimeSpan? Duration { get; set; }
 

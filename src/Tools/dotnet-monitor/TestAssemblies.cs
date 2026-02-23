@@ -23,6 +23,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
 #nullable disable
         [Conditional("DEBUG")]
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Debug-only code for test assembly loading.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2075:Value passed to a method parameter annotated with 'DynamicallyAccessedMembersAttribute' does not satisfy the same requirements.", Justification = "Debug-only code for test assembly loading.")]
         public static void SimulateStartupHook()
         {
             // This code is to aid loading the TestStartupHook assembly when debug launching dotnet-monitor

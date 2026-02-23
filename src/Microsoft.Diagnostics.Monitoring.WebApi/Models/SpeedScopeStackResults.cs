@@ -48,14 +48,14 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Models
         public string? File { get; set; }
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<ProfileType>))]
     public enum ProfileType
     {
         evented,
         sampled
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<UnitType>))]
     public enum UnitType
     {
         none,
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Models
         bytes,
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<ProfileEventType>))]
     public enum ProfileEventType
     {
         O,

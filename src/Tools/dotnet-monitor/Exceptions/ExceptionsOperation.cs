@@ -159,7 +159,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Exceptions
                 };
             }
 
-            await JsonSerializer.SerializeAsync(stream, model, cancellationToken: token);
+            await JsonSerializer.SerializeAsync(stream, model, MonitorSerializerContext.Default.ExceptionInstance, token);
 
             await stream.WriteAsync(JsonRecordDelimiter, token);
         }

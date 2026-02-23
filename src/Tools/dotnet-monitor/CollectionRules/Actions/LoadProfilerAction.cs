@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Binder.SourceGeneration;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,6 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.CollectionRules.Actions
             _logger = logger ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Options types are preserved by the application.")]
         public ICollectionRuleAction Create(IProcessInfo processInfo, LoadProfilerOptions options)
         {
             if (null == options)

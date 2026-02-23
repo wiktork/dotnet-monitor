@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 
@@ -62,6 +63,7 @@ namespace Microsoft.Diagnostics.Monitoring
             Payload = SerializePayload(payloadObject);
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Payload serialization uses known types.")]
         private static byte[] SerializePayload(object payloadObject)
         {
             string jsonPayload = JsonSerializer.Serialize(payloadObject);

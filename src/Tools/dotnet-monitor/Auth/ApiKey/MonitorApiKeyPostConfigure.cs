@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Monitor.Auth.ApiKey
@@ -30,6 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Auth.ApiKey
             _apiKeyOptions = apiKeyOptions;
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Options types are preserved by the application.")]
         public void PostConfigure(string? name, MonitorApiKeyConfiguration options)
         {
             MonitorApiKeyOptions sourceOptions = _apiKeyOptions.CurrentValue;

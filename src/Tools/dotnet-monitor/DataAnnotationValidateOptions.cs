@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 #if EXTENSION
 namespace Microsoft.Diagnostics.Monitoring.Extension.Common
@@ -26,6 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             _serviceProvider = serviceProvider;
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Options types are preserved by the application.")]
         public ValidateOptionsResult Validate(string? name, TOptions options)
         {
             ValidationContext validationContext = new(options, _serviceProvider, null);

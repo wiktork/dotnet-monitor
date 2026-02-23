@@ -6,6 +6,7 @@
 using Microsoft.Extensions.Options;
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
@@ -18,6 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     /// on all of the names in the cache (e.g. <see cref="TryRemove(string)"/> on the default name signals
     /// that all of the named options should be cleared.
     /// </remarks>
+    [UnconditionalSuppressMessage("Trimming", "IL2091:'DynamicallyAccessedMemberTypes' requirements do not match.", Justification = "Options types are preserved by the application.")]
     internal sealed class DynamicNamedOptionsCache<TOptions> :
         OptionsCache<TOptions>
         where TOptions : class

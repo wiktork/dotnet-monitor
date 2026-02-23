@@ -41,6 +41,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Utils = Microsoft.Diagnostics.Monitoring.WebApi.Utilities;
 
@@ -197,7 +198,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             return services;
         }
 
-        public static IServiceCollection RegisterCollectionRuleAction<TFactory, TOptions, TDescriptor>(this IServiceCollection services)
+        public static IServiceCollection RegisterCollectionRuleAction<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TFactory,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TOptions,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TDescriptor>
+            (this IServiceCollection services)
             where TFactory : class, ICollectionRuleActionFactory<TOptions>
             where TOptions : BaseRecordOptions, new()
             where TDescriptor : class, ICollectionRuleActionDescriptor
@@ -211,7 +216,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             return services;
         }
 
-        public static IServiceCollection RegisterCollectionRuleTrigger<TFactory, TDescriptor>(this IServiceCollection services)
+        public static IServiceCollection RegisterCollectionRuleTrigger<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TFactory,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TDescriptor>
+            (this IServiceCollection services)
             where TFactory : class, ICollectionRuleTriggerFactory
             where TDescriptor : class, ICollectionRuleTriggerDescriptor
         {
@@ -221,7 +229,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             return services;
         }
 
-        public static IServiceCollection RegisterCollectionRuleTrigger<TFactory, TOptions, TDescriptor>(this IServiceCollection services)
+        public static IServiceCollection RegisterCollectionRuleTrigger<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TFactory,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TOptions,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TDescriptor>
+            (this IServiceCollection services)
             where TFactory : class, ICollectionRuleTriggerFactory<TOptions>
             where TOptions : class, new()
             where TDescriptor : class, ICollectionRuleTriggerDescriptor

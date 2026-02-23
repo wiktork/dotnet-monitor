@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
                 stackResultModel.Stacks.Add(StackUtilities.TranslateCallStackToModel(stack, cache, ensureParameterTypeFieldsNotNull: false));
             }
 
-            await JsonSerializer.SerializeAsync(OutputStream, stackResultModel, cancellationToken: token);
+            await JsonSerializer.SerializeAsync(OutputStream, stackResultModel, MonitorSerializerContext.Default.CallStackResult, token);
         }
     }
 }

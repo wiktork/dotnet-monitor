@@ -171,7 +171,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
             };
 
             var parserLogger = mode == ExtensionMode.Execute ? _logger : NullLogger<EgressExtension>.Instance;
-            using OutputParser<EgressArtifactResult> parser = new(p, parserLogger);
+            using OutputParser<EgressArtifactResult> parser = new(p, parserLogger, EgressSerializerContext.Default.EgressArtifactResult);
 
             _logger.ExtensionStarting(_manifest.Name);
             if (!p.Start())
@@ -183,7 +183,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
 
             // p.StandardInput.BaseStream Format: Version (int), Payload Length (long), Payload, Artifact
             using Stream intermediateStream = new MemoryStream();
-            await JsonSerializer.SerializeAsync(intermediateStream, payload, options: null, token);
+            await JsonSerializer.SerializeAsync(intermediateStream, payload, EgressSerializerContext.Default.ExtensionEgressPayload, token);
 
             using (BinaryWriter writer = new BinaryWriter(p.StandardInput.BaseStream, Encoding.UTF8, leaveOpen: true))
             {

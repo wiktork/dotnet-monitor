@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.ParameterCapturing
                 await OutputStream.WriteAsync(JsonSequenceRecordSeparator, token);
             }
 
-            await JsonSerializer.SerializeAsync(OutputStream, capturedMethod, cancellationToken: token);
+            await JsonSerializer.SerializeAsync(OutputStream, capturedMethod, MonitorSerializerContext.Default.CapturedMethod, token);
         }
 
         protected override async Task WriteItemSeparatorAsync(CancellationToken token)

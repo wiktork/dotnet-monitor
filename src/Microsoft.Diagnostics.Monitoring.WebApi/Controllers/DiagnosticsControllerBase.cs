@@ -123,7 +123,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Controllers
             Guid operationId = await OperationStore.AddOperation(egressOperation, limitKey);
             return linkGenerator.GetUriByName(
                 endpointName: nameof(OperationsController.GetOperationStatus),
-                values: new { operationId },
+                values: new RouteValueDictionary { ["operationId"] = operationId },
                 scheme: HttpContext.Request.Scheme,
                 host: HttpContext.Request.Host);
         }

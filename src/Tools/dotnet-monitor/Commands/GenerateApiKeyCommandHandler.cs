@@ -12,6 +12,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Microsoft.Diagnostics.Tools.Monitor.Commands
 {
@@ -20,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Commands
     /// part of the Authorization header, and is the Base64 encoded key.
     /// The second output is a hex encoded string of the hash of the secret.
     /// </summary>
-    internal static class GenerateApiKeyCommandHandler
+    internal static partial class GenerateApiKeyCommandHandler
     {
         public static void Invoke(OutputFormat output, TimeSpan expiration, TextWriter outputWriter)
         {
@@ -48,7 +49,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Commands
                     Authentication = opts.Authentication,
                     AuthorizationHeader = $"{AuthConstants.ApiKeySchema} {newJwt.Token}" // This is the actual format of the HTTP header and should not be localized
                 };
-                outputBldr.AppendLine(JsonSerializer.Serialize(result, result.GetType(), new JsonSerializerOptions() { WriteIndented = true }));
+                outputBldr.AppendLine(JsonSerializer.Serialize(result, MachineOutputFormatContext.Default.MachineOutputFormat));
             }
             else
             {
@@ -136,13 +137,19 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Commands
         /// This is the first copy of this class, the testing companion is
         /// Microsoft.Diagnostics.Monitoring.Tool.FunctionalTests.Runners.MonitorGenerateKeyRunner.ExpectedMachineOutputFormat
         /// ExpectedMachineOutputFormat. Any breaking changes here will cause a test failure.
-        /// If you find yourself here editing this, 
+        /// If you find yourself here editing this,
         /// be careful of any downstream dependencies that are depending on this remaining stable.
         /// </remarks>
         internal class MachineOutputFormat
         {
             public required AuthenticationOptions Authentication { get; set; }
             public required string AuthorizationHeader { get; set; }
+        }
+
+        [JsonSourceGenerationOptions(WriteIndented = true)]
+        [JsonSerializable(typeof(MachineOutputFormat))]
+        private partial class MachineOutputFormatContext : JsonSerializerContext
+        {
         }
     }
 }

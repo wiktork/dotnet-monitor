@@ -124,11 +124,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Stacks
                 }
             }
 
-            JsonSerializerOptions options = new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-            };
-            await JsonSerializer.SerializeAsync(OutputStream, speedscopeResult, options, cancellationToken: token);
+            await JsonSerializer.SerializeAsync(OutputStream, speedscopeResult, SpeedScopeSerializerContext.Default.SpeedscopeResult, token);
         }
     }
 }

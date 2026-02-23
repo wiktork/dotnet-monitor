@@ -18,7 +18,6 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Models
     {
         [JsonPropertyName("name")]
         [Required]
-        [MinLength(1)]
         public string Name { get; set; } = string.Empty;
 
         [JsonPropertyName("keywords")]

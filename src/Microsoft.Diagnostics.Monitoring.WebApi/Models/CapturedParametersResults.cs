@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Models
         public EvaluationFailureReason EvalFailReason { get; init; }
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<EvaluationFailureReason>))]
     public enum EvaluationFailureReason
     {
         None = 0,
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring.WebApi.Models
         [JsonPropertyName("activityId")]
         public string? ActivityId { get; init; }
 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter<ActivityIdFormat>))]
         [JsonPropertyName("activityIdFormat")]
         public ActivityIdFormat ActivityIdFormat { get; init; }
 

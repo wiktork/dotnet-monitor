@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.Diagnostics.Tools.Monitor.Auth
 {
@@ -63,6 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Auth
             }
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Options types are preserved by the application.")]
         private static void ValidateAuthConfigSection<T>(T options, string configurationPath) where T : notnull
         {
             List<ValidationResult> results = new();

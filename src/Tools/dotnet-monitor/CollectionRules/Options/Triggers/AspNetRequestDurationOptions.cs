@@ -34,13 +34,13 @@ namespace Microsoft.Diagnostics.Tools.Monitor.CollectionRules.Options.Triggers
             ResourceType = typeof(OptionsDisplayStrings),
             Description = nameof(OptionsDisplayStrings.DisplayAttributeDescription_AspNetRequestDurationOptions_RequestDuration))]
         [DefaultValue(AspNetRequestDurationOptionsDefaults.RequestDuration)]
-        [Range(typeof(TimeSpan), RequestDuration_MinValue, RequestDuration_MaxValue)]
+        [TimeSpanRange(RequestDuration_MinValue, RequestDuration_MaxValue)]
         public TimeSpan? RequestDuration { get; set; }
 
         [Display(
             ResourceType = typeof(OptionsDisplayStrings),
             Description = nameof(OptionsDisplayStrings.DisplayAttributeDescription_AspNetRequestDurationOptions_SlidingWindowDuration))]
-        [Range(typeof(TimeSpan), TriggerOptionsConstants.SlidingWindowDuration_MinValue, TriggerOptionsConstants.SlidingWindowDuration_MaxValue)]
+        [TimeSpanRange(TriggerOptionsConstants.SlidingWindowDuration_MinValue, TriggerOptionsConstants.SlidingWindowDuration_MaxValue)]
         public TimeSpan? SlidingWindowDuration { get; set; }
 
         // CONSIDER: Currently described that paths have to exactly match one item in the list.
