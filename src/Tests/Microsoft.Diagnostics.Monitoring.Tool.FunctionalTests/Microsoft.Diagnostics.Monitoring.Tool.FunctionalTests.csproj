@@ -97,7 +97,7 @@
     <ProjectReference Include="..\..\Tools\dotnet-monitor\dotnet-monitor.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
-      <GlobalPropertiesToRemove>TargetFramework</GlobalPropertiesToRemove>
+      <GlobalPropertiesToRemove>TargetFramework;CustomIsPacking</GlobalPropertiesToRemove>
     </ProjectReference>
     <ProjectReference Include="..\Microsoft.Diagnostics.Monitoring.TestCommon\Microsoft.Diagnostics.Monitoring.TestCommon.csproj" />
     <ProjectReference Include="..\Microsoft.Diagnostics.Monitoring.UnitTestApp\Microsoft.Diagnostics.Monitoring.UnitTestApp.csproj" />

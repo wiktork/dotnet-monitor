@@ -16,6 +16,10 @@
     <SelfContained Condition="'$(CustomIsPacking)' == 'true'">true</SelfContained>
     <PublishTrimmed Condition="'$(CustomIsPacking)' == 'true'">true</PublishTrimmed>
     <TrimMode Condition="'$(CustomIsPacking)' == 'true'">full</TrimMode>
+    <!-- Suppress trim analysis warnings until the codebase is fully trim-annotated.
+         In .NET 9+ SuppressTrimAnalysisWarnings defaults to false when PublishTrimmed is set,
+         which combined with TreatWarningsAsErrors causes IL2026/IL2075/IL2091 build failures. -->
+    <SuppressTrimAnalysisWarnings Condition="'$(CustomIsPacking)' == 'true'">true</SuppressTrimAnalysisWarnings>
   </PropertyGroup>
 
   <ItemGroup>
