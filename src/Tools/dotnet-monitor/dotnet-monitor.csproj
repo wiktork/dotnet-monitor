@@ -11,13 +11,11 @@
     <Nullable>enable</Nullable>
     <EnableConfigurationBindingGenerator>false</EnableConfigurationBindingGenerator>
     <DisableCompileTimeOpenApiXmlGenerator>true</DisableCompileTimeOpenApiXmlGenerator>
-    <!-- This repo sets RuntimeIdentifiers globally in Directory.Build.props, but we explicitly don't want to use
-         RID-specific tools yet. So we need to clear the RuntimeIdentifiers here. -->
-    <RuntimeIdentifiers Condition="'$(CustomIsPacking)' == 'true'"></RuntimeIdentifiers>
-    <!-- This doesn't work as a way to override the set of package identifiers (yet) because in MSBuild logic we
-         can't detect the difference between property-set-to-empty and property-does-not-exist.
-         See https://github.com/dotnet/msbuild/issues/12404 for tracking. -->
-    <ToolPackageRuntimeIdentifiers></ToolPackageRuntimeIdentifiers>
+    <!-- When packing as a tool, produce a self-contained trimmed package so it can run
+         without a pre-installed .NET runtime. Image builds remain framework-dependent. -->
+    <SelfContained Condition="'$(CustomIsPacking)' == 'true'">true</SelfContained>
+    <PublishTrimmed Condition="'$(CustomIsPacking)' == 'true'">true</PublishTrimmed>
+    <TrimMode Condition="'$(CustomIsPacking)' == 'true'">full</TrimMode>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,7 +41,7 @@
          need to customize it's layout. We _do_ however need to ensure that it _gets built_ before we build/publish. -->
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.StartupHook\Microsoft.Diagnostics.Monitoring.StartupHook.csproj"
       AdditionalProperties="RuntimeIdentifier=;PublishDir=$(StartupHookPublishPath)"
-      GlobalPropertiesToRemove="PublishSingleFile"
+      GlobalPropertiesToRemove="PublishSingleFile;PublishTrimmed;SelfContained"
       Targets="Publish"
       ReferenceOutputAssembly="false" />
   </ItemGroup>
@@ -106,41 +104,46 @@
   <Target Name="CollectTfmSpecificPackageFiles"
           DependsOnTargets="PublishProjectsBeforePack">
     <ItemGroup>
-      <!-- Pack the profiler library for each platform. -->
+      <_ToolRuntimeIdentifier Include="$(DefaultRuntimeIdentifiers)" />
+    </ItemGroup>
+    <ItemGroup>
+      <!-- Pack the profiler library for each platform into its matching RID directory. -->
       <AdditionalPackageFile Include="@(MonitorProfilerLibraryFile)">
-        <PackagePath>tools/$(TargetFramework)/any/shared/%(TargetRid)/native</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(TargetRid)/shared/%(TargetRid)/native</PackagePath>
       </AdditionalPackageFile>
       <AdditionalPackageFile Include="@(MutatingMonitorProfilerLibraryFile)">
-        <PackagePath>tools/$(TargetFramework)/any/shared/%(TargetRid)/native</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(TargetRid)/shared/%(TargetRid)/native</PackagePath>
       </AdditionalPackageFile>
-      <!-- Pack the profiler symbols for each platform. -->
+      <!-- Pack the profiler symbols for each platform into its matching RID directory. -->
       <AdditionalPackageFile Include="@(MonitorProfilerSymbolsFile)">
-        <PackagePath>tools/$(TargetFramework)/any/shared/%(TargetRid)/native</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(TargetRid)/shared/%(TargetRid)/native</PackagePath>
       </AdditionalPackageFile>
       <AdditionalPackageFile Include="@(MutatingMonitorProfilerSymbolsFile)">
-        <PackagePath>tools/$(TargetFramework)/any/shared/%(TargetRid)/native</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(TargetRid)/shared/%(TargetRid)/native</PackagePath>
       </AdditionalPackageFile>
       <AdditionalPackageFile Include="@(CommonMonitorProfilerSymbolsFile)">
-        <PackagePath>tools/$(TargetFramework)/any/shared/%(TargetRid)/native</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(TargetRid)/shared/%(TargetRid)/native</PackagePath>
       </AdditionalPackageFile>
     </ItemGroup>
     <ItemGroup>
       <!-- Pack the file if it exists. -->
       <TfmSpecificPackageFile Include="@(AdditionalPackageFile->Exists())" />
-      <!-- Pack startup hook files -->
+    </ItemGroup>
+    <ItemGroup>
+      <!-- Pack startup hook files into each RID directory -->
       <TfmSpecificPackageFile Include="$(StartupHookLibraryPath)">
-        <PackagePath>tools/$(TargetFramework)/any/shared/any/$(StartupHookTargetFramework)</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(_ToolRuntimeIdentifier.Identity)/shared/any/$(StartupHookTargetFramework)</PackagePath>
       </TfmSpecificPackageFile>
       <TfmSpecificPackageFile Include="$(StartupHookSymbolsPath)">
-        <PackagePath>tools/$(TargetFramework)/any/shared/any/$(StartupHookTargetFramework)</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(_ToolRuntimeIdentifier.Identity)/shared/any/$(StartupHookTargetFramework)</PackagePath>
       </TfmSpecificPackageFile>
 
-      <!-- Pack extension files -->
+      <!-- Pack extension files into each RID directory -->
       <TfmSpecificPackageFile Include="$(AzureBlobStoragePublishRootPath)$(TargetFramework)\any\**">
-        <PackagePath>tools/$(TargetFramework)/any/extensions/$(AzureBlobStorageExtensionFolderName)</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(_ToolRuntimeIdentifier.Identity)/extensions/$(AzureBlobStorageExtensionFolderName)</PackagePath>
       </TfmSpecificPackageFile>
       <TfmSpecificPackageFile Include="$(S3StoragePublishRootPath)$(TargetFramework)\any\**">
-        <PackagePath>tools/$(TargetFramework)/any/extensions/$(S3StorageExtensionFolderName)</PackagePath>
+        <PackagePath>tools/$(TargetFramework)/%(_ToolRuntimeIdentifier.Identity)/extensions/$(S3StorageExtensionFolderName)</PackagePath>
       </TfmSpecificPackageFile>
     </ItemGroup>
   </Target>
