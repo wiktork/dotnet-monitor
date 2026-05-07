@@ -85,18 +85,21 @@ extends:
 
         # Only scan the files that are being shipped; use the same gathering procedure
         # that the asset staging process uses.
-        - task: PowerShell@2
+        - task: AzureCLI@2
           displayName: 'Download Build Assets'
           inputs:
-            targetType: filePath
-            filePath: '$(Build.Repository.LocalPath)/eng/release/Scripts/AcquireBuild.ps1'
-            arguments: >-
-              -BarBuildId "$(BuildBarId)"
-              -AzdoToken "$(dn-bot-all-drop-rw-code-rw-release-all)"
-              -DownloadTargetPath "$(System.ArtifactsDirectory)\BuildAssets"
-              -SasSuffixes "$(dotnetbuilds-internal-checksums-container-read-token),$(dotnetbuilds-internal-container-read-token)"
-              -ReleaseVersion "$(BuildVersion)"
-              -Separated $False
+            azureSubscription: 'DotNetStaging'
+            scriptType: ps
+            scriptLocation: inlineScript
+            inlineScript: |
+              $azdoToken = az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv
+              & '$(Build.Repository.LocalPath)/eng/release/Scripts/AcquireBuild.ps1' `
+                -BarBuildId "$(BuildBarId)" `
+                -AzdoToken $azdoToken `
+                -DownloadTargetPath "$(System.ArtifactsDirectory)\BuildAssets" `
+                -SasSuffixes "$(dotnetbuilds-internal-checksums-container-read-token),$(dotnetbuilds-internal-container-read-token)" `
+                -ReleaseVersion "$(BuildVersion)" `
+                -Separated $False
             workingDirectory: '$(Build.Repository.LocalPath)'
           continueOnError: true
 
