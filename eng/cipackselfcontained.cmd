@@ -34,6 +34,15 @@ set "_logDir=%_root%artifacts\log\Release\"
 set "_toggle=/p:DotNetMonitorBuildSelfContainedTool=true"
 set "_commonArgs=-ci -prepareMachine -verbosity minimal -configuration Release"
 
+REM The pipeline forwards MSBuild properties (e.g. ThirdPartyNoticesFilePath) wrapped in single quotes. That is
+REM correct for the Arcade steps below, which are invoked through PowerShell (PowerShell strips the quotes), but
+REM NOT for the direct `dotnet` invocations: cmd passes single quotes through verbatim, so a single-quoted path
+REM is seen by MSBuild as a malformed relative path and breaks pack (the quoted ThirdPartyNoticesFilePath is
+REM packed as a <None> file and resolves to '<projectdir>\'<quoted-abs-path>''). Strip single quotes for the
+REM direct dotnet restore/pack steps; the forwarded values contain no spaces, so the quotes are unnecessary.
+set "_args=%*"
+if defined _args set "_args=%_args:'=%"
+
 REM Step 1: Provision the toolset (.dotnet, SignTool) and restore the self-contained closure. The closure is
 REM scoped to the host + the two bundled extensions by src\Tools\dotnet-monitor\ProjectsToBuild.props
 REM (imported by eng\Build.props only under the toggle).
@@ -47,22 +56,22 @@ REM PublishTrimmed in their publish-time properties, so a RID-agnostic restore o
 REM assets and the extensions would publish UNTRIMMED; restoring each extension once per RID with the
 REM self-contained publish properties provisions them. (Arcade's -restore above also restores this closure,
 REM but these explicit restores are what guarantee the trim assets the direct --no-restore pack depends on.)
-"%_dotnet%" restore "%_root%src\Tools\dotnet-monitor\dotnet-monitor.csproj" %_toggle% %*
+"%_dotnet%" restore "%_root%src\Tools\dotnet-monitor\dotnet-monitor.csproj" %_toggle% %_args%
 if errorlevel 1 exit /b %ERRORLEVEL%
-"%_dotnet%" restore "%_root%src\Extensions\AzureBlobStorage\AzureBlobStorage.csproj" -r win-x64 %_toggle% /p:SelfContained=true /p:PublishTrimmed=true /p:PublishSingleFile=true %*
+"%_dotnet%" restore "%_root%src\Extensions\AzureBlobStorage\AzureBlobStorage.csproj" -r win-x64 %_toggle% /p:SelfContained=true /p:PublishTrimmed=true /p:PublishSingleFile=true %_args%
 if errorlevel 1 exit /b %ERRORLEVEL%
-"%_dotnet%" restore "%_root%src\Extensions\AzureBlobStorage\AzureBlobStorage.csproj" -r linux-x64 %_toggle% /p:SelfContained=true /p:PublishTrimmed=true /p:PublishSingleFile=true %*
+"%_dotnet%" restore "%_root%src\Extensions\AzureBlobStorage\AzureBlobStorage.csproj" -r linux-x64 %_toggle% /p:SelfContained=true /p:PublishTrimmed=true /p:PublishSingleFile=true %_args%
 if errorlevel 1 exit /b %ERRORLEVEL%
-"%_dotnet%" restore "%_root%src\Extensions\S3Storage\S3Storage.csproj" -r win-x64 %_toggle% /p:SelfContained=true /p:PublishTrimmed=true /p:PublishSingleFile=true %*
+"%_dotnet%" restore "%_root%src\Extensions\S3Storage\S3Storage.csproj" -r win-x64 %_toggle% /p:SelfContained=true /p:PublishTrimmed=true /p:PublishSingleFile=true %_args%
 if errorlevel 1 exit /b %ERRORLEVEL%
-"%_dotnet%" restore "%_root%src\Extensions\S3Storage\S3Storage.csproj" -r linux-x64 %_toggle% /p:SelfContained=true /p:PublishTrimmed=true /p:PublishSingleFile=true %*
+"%_dotnet%" restore "%_root%src\Extensions\S3Storage\S3Storage.csproj" -r linux-x64 %_toggle% /p:SelfContained=true /p:PublishTrimmed=true /p:PublishSingleFile=true %_args%
 if errorlevel 1 exit /b %ERRORLEVEL%
 
 REM Step 3: Pack via direct `dotnet pack` (RID fan-out -> base wrapper + per-RID self-contained, single-file,
 REM fully-trimmed packages). --no-restore relies on the restores above. ValidateSelfContainedToolPackages
 REM turns on the guard targets that assert the matching-RID native profilers are present and that only
 REM dotnet-monitor-selfcontained* shipping packages are produced.
-"%_dotnet%" pack "%_root%src\Tools\dotnet-monitor\dotnet-monitor.csproj" --configuration Release --no-restore %_toggle% /p:ValidateSelfContainedToolPackages=true "/bl:%_logDir%PackSelfContained.binlog" %*
+"%_dotnet%" pack "%_root%src\Tools\dotnet-monitor\dotnet-monitor.csproj" --configuration Release --no-restore %_toggle% /p:ValidateSelfContainedToolPackages=true "/bl:%_logDir%PackSelfContained.binlog" %_args%
 if errorlevel 1 exit /b %ERRORLEVEL%
 
 REM Step 4: Sign the produced packages (and their single-file apphost / native + extension executables) via
