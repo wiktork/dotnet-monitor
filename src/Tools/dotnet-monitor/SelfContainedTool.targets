@@ -1,0 +1,232 @@
+<Project>
+
+  <!--
+    Self-contained tool build (dotnet-monitor-selfcontained).
+
+    Activated by the single global toggle 'DotNetMonitorBuildSelfContainedTool=true'. Everything in this file is
+    PROJECT-LOCAL: the self-contained/single-file/trimmed properties are deliberately NOT passed as global
+    properties, because global properties cascade into every ProjectReference (StartupHook, WebApi, Options,
+    extensions) and break their publishes (NETSDK1097/1099) or collide on PackageId ("ambiguous project name").
+    The toggle itself is the only global property; all of the behavior it switches on lives here.
+
+    When the toggle is off this file contributes nothing, so the default framework-dependent dotnet-monitor
+    package is completely unaffected.
+
+    Layout note: for a RID-specific self-contained tool the SDK packs the host at tools/any/<rid>/ (the short
+    TFM segment becomes "any" once SelfContained=true - see Microsoft.NET.PackTool.targets). The runtime asset
+    discovery in dotnet-monitor is relative to the executable directory, so the profilers, startup hook, and
+    extensions are injected next to the host at that same tools/any/<rid>/ root.
+  -->
+
+  <PropertyGroup Condition="'$(DotNetMonitorBuildSelfContainedTool)' == 'true'">
+    <PackageId>dotnet-monitor-selfcontained</PackageId>
+
+    <!-- Override the repo-wide RuntimeIdentifiers (set in Directory.Build.props) with the self-contained tool's
+         supported set. This drives the SDK to produce a base wrapper package plus one package per RID.
+         ToolPackageRuntimeIdentifiers is pinned as well so the per-RID package set cannot be widened by shim
+         RIDs (PackAsToolShimRuntimeIdentifiers), which would otherwise leak into RuntimeIdentifiers. -->
+    <ToolPackageRuntimeIdentifiers>win-x64;linux-x64</ToolPackageRuntimeIdentifiers>
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+    <!-- The framework-dependent tool sets PackAsToolShimRuntimeIdentifiers (in src\Tools\Directory.Build.props)
+         to ship native apphost shims for the whole RID matrix inside a single framework-dependent package. The
+         self-contained tool uses a different model entirely - one self-contained, RID-specific package per RID,
+         each carrying its own apphost - so the shim mechanism must be disabled. Leaving it on would re-expand
+         RuntimeIdentifiers to the full matrix (forcing matrix-wide restore) and emit unwanted shims. -->
+    <PackAsToolShimRuntimeIdentifiers></PackAsToolShimRuntimeIdentifiers>
+
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <!-- Full trimming: every assembly is analyzed and trimmed. The reflection-dependent assemblies that would
+         break at runtime (or whose owners ship them trim-unsafe) are preserved whole via the TrimmerRootAssembly
+         item group below, so almost all of the size reduction comes from the framework/runtime assemblies that
+         are already trim-clean. See the item group for the rationale behind each rooted assembly. -->
+    <TrimMode>full</TrimMode>
+    <!-- dotnet-monitor relies on reflection-based JSON serialization (e.g. generatekey) and reflection-based
+         configuration binding (consistent with the framework-dependent host, which already sets
+         EnableConfigurationBindingGenerator=false). PublishTrimmed disables reflection JSON by default, so it is
+         re-enabled here; this works because the assemblies carrying the serialized/validated/bound types are
+         rooted below, so their members survive trimming. -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+
+    <!-- The SDK defaults System.StartupHookSupport to false when PublishTrimmed is on, which disables the
+         DOTNET_STARTUP_HOOKS feature in the trimmed host. The framework-dependent host leaves startup hooks
+         enabled (it is not trimmed), so re-enable them here for behavioral parity with the shipping
+         framework-dependent tool. This also lets the functional test suite inject its test startup hook into
+         the self-contained host so the exact shipped artifact can be exercised end-to-end. -->
+    <StartupHookSupport>true</StartupHookSupport>
+
+    <!-- Fail fast rather than blanket-suppress. SuppressTrimAnalysisWarnings stays off so the linker reports
+         every trim warning and, under the repo-wide TreatWarningsAsErrors, breaks the build if a future change
+         adds a reflection dependency that full trimming would actually remove (instead of silently trimming code
+         and failing at runtime). dotnet-monitor's own warnings are addressed with real attributes:
+         [DynamicallyAccessedMembers] where a member can be preserved precisely, and per-member/per-type
+         [UnconditionalSuppressMessage] (see the GlobalSuppressions.*.cs files) where the referenced type set is
+         already preserved by the TrimmerRootAssembly items below. The Roslyn trim analyzer stays off because
+         rooting is a link-time concept the analyzer cannot see: leaving it on would flood the compile with
+         warnings for code that is preserved (rooted) and therefore not actually removed. -->
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+
+    <!-- IL2104 ("Assembly 'X' produced trim warnings") is the single-warning summary the linker emits for the
+         reflection-heavy third-party diagnostic assemblies we deliberately keep whole (TraceEvent, EventPipe,
+         FastSerialization - see the TrimmerRootAssembly items below). We cannot annotate code we do not own, and
+         keeping these assemblies whole is the intended behavior, so the summary is accepted here. This is narrow:
+         IL2104 is only ever the per-assembly rollup, so it cannot hide an actionable IL2026/IL2070/IL2075/IL2091
+         in dotnet-monitor's own code, which are still reported (and addressed with attributes). -->
+    <NoWarn>$(NoWarn);IL2104</NoWarn>
+
+    <!-- Register the self-contained content collector. The framework-dependent collector
+         (CollectTfmSpecificPackageFiles in dotnet-monitor.csproj) is guarded off when the toggle is on. -->
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);CollectSelfContainedToolPackageFiles</TargetsForTfmSpecificContentInPackage>
+
+    <!-- Guards that protect the integrity of the self-contained pack (see the validation targets below).
+         They are defaulted on for CI builds, where the cross-platform native profilers are present (gathered
+         from the unified build) and the package set must be exactly the self-contained packages. Local dev
+         packs leave them off so a quick profiler-less pack still succeeds for iteration; the CI pack script
+         (eng/cipackselfcontained.cmd) sets this explicitly. -->
+    <ValidateSelfContainedToolPackages Condition="'$(ValidateSelfContainedToolPackages)' == ''">$(ContinuousIntegrationBuild)</ValidateSelfContainedToolPackages>
+  </PropertyGroup>
+
+  <!--
+    Preserve the reflection-dependent assemblies that full trimming cannot reason about. TrimmerRootAssembly keeps
+    every member of each listed assembly, so the reflection-based code (trace/event parsing, JSON serialization,
+    configuration binding, DataAnnotations validation) keeps working at runtime even though the trimmer cannot see
+    those usages. Note that rooting preserves members but does NOT silence trim analysis: these assemblies are
+    still analyzed, so dotnet-monitor's own rooted assemblies still emit IL2026/IL2070/IL2075/IL2091 at their
+    reflection call sites - those are addressed with attributes (DAM + UnconditionalSuppressMessage; see the
+    GlobalSuppressions.*.cs files), and the third-party assemblies roll their warnings up into IL2104 (NoWarn'd
+    above). Trimming dotnet-monitor's own assemblies saves only ~140 KB, so preserving them costs almost nothing
+    while removing the runtime risk. These items only affect the host publish (the project being published); the
+    extensions root their own assemblies in their respective ProjectsToPublish.props.
+  -->
+  <ItemGroup Condition="'$(DotNetMonitorBuildSelfContainedTool)' == 'true'">
+    <!-- Third-party diagnostic libraries: reflection-heavy trace/event parsing, cannot be annotated by us, and
+         trimming them removes the parsers that trace/GC-dump/metrics collection depend on. FastSerialization is a
+         TraceEvent sibling used by its (de)serialization paths and must be preserved alongside it. -->
+    <TrimmerRootAssembly Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
+    <TrimmerRootAssembly Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
+    <TrimmerRootAssembly Include="Microsoft.Diagnostics.FastSerialization" />
+    <!-- dotnet-monitor's own model/option/DTO assemblies. Reflection-based JSON serialization, reflection-based
+         configuration binding, and DataAnnotations validation (including [Range(typeof(TimeSpan), ...)] on the
+         collection-rule options) all operate over these closed type sets, which the trimmer cannot see. -->
+    <TrimmerRootAssembly Include="dotnet-monitor" />
+    <TrimmerRootAssembly Include="Microsoft.Diagnostics.Monitoring.WebApi" />
+    <TrimmerRootAssembly Include="Microsoft.Diagnostics.Monitoring.Options" />
+    <!-- TimeSpanConverter (and the other intrinsic TypeConverters) are resolved reflectively by
+         [Range(typeof(TimeSpan), "min", "max")] when DataAnnotations validates collection-rule durations and
+         sliding windows, and by reflection-based configuration binding of TimeSpan options. Preserve the whole
+         assembly so that validation and binding keep working for every converter-backed type. -->
+    <TrimmerRootAssembly Include="System.ComponentModel.TypeConverter" />
+
+    <!-- Suppress the two trim warnings that originate in framework members dotnet-monitor cannot annotate at the
+         call site (minimal-API JSON resolver and a dead BinaryFormatter licensing path). See the XML for the
+         per-member justifications. Passed to illink as an EXTERNAL link-attributes file via the SDK's
+         _ILLinkSuppressions hook (an embedded attributes document may only target its own assembly - IL2101 -
+         so cross-assembly suppressions must be external). Gated on the toggle so the framework-dependent
+         build/image do not carry it. -->
+    <_ILLinkSuppressions Include="$(MSBuildThisFileDirectory)ILLink.LinkAttributes.SelfContained.xml" />
+
+    <!-- Preserve the AssemblyLoadContext assembly-loading extensibility API so that startup hooks (enabled via
+         StartupHookSupport above) can customize assembly resolution against the trimmed host. The host does not
+         use the Resolving event itself, so full trimming would otherwise remove it. This is a narrow root for a
+         public extensibility surface; it intentionally does not root hosting/DI/reflection internals. -->
+    <TrimmerRootDescriptor Include="$(MSBuildThisFileDirectory)ILLink.Descriptors.SelfContained.xml" />
+  </ItemGroup>
+
+  <!--
+    Inject the out-of-process runtime assets next to the self-contained host for the current RID. Runs only for
+    the RID-specific inner builds (RuntimeIdentifier != ''); the base wrapper package carries no implementation.
+  -->
+  <Target Name="CollectSelfContainedToolPackageFiles"
+          Condition="'$(DotNetMonitorBuildSelfContainedTool)' == 'true' and '$(RuntimeIdentifier)' != ''"
+          DependsOnTargets="PublishProjectsBeforePack">
+    <PropertyGroup>
+      <_SelfContainedToolRoot>tools/any/$(RuntimeIdentifier)</_SelfContainedToolRoot>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!-- Profilers and their symbols for the matching RID only. The profiler is loaded into the *target*
+           process, so a self-contained x64 tool can only profile same-OS x64 targets; profiling musl (Alpine)
+           or x86 targets is not supported by this package (use the framework-dependent tool or image). -->
+      <_SelfContainedProfilerFile Include="@(MonitorProfilerLibraryFile)" Condition="'%(TargetRid)' == '$(RuntimeIdentifier)'" />
+      <_SelfContainedProfilerFile Include="@(MutatingMonitorProfilerLibraryFile)" Condition="'%(TargetRid)' == '$(RuntimeIdentifier)'" />
+      <_SelfContainedProfilerFile Include="@(MonitorProfilerSymbolsFile)" Condition="'%(TargetRid)' == '$(RuntimeIdentifier)'" />
+      <_SelfContainedProfilerFile Include="@(MutatingMonitorProfilerSymbolsFile)" Condition="'%(TargetRid)' == '$(RuntimeIdentifier)'" />
+      <_SelfContainedProfilerFile Include="@(CommonMonitorProfilerSymbolsFile)" Condition="'%(TargetRid)' == '$(RuntimeIdentifier)'" />
+
+      <TfmSpecificPackageFile Include="@(_SelfContainedProfilerFile->Exists())">
+        <PackagePath>$(_SelfContainedToolRoot)/shared/$(RuntimeIdentifier)/native</PackagePath>
+      </TfmSpecificPackageFile>
+
+      <!-- Startup hook (platform-neutral managed assembly, injected into target processes). -->
+      <TfmSpecificPackageFile Include="$(StartupHookLibraryPath)">
+        <PackagePath>$(_SelfContainedToolRoot)/shared/any/$(StartupHookTargetFramework)</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="$(StartupHookSymbolsPath)">
+        <PackagePath>$(_SelfContainedToolRoot)/shared/any/$(StartupHookTargetFramework)</PackagePath>
+      </TfmSpecificPackageFile>
+
+      <!-- Self-contained extensions. Pack everything from the self-contained publish except the
+           framework-dependent manifest, then overlay the ExecutableFileName manifest variant as extension.json
+           so dotnet-monitor launches the extension's native executable directly (there is no shared host). -->
+      <TfmSpecificPackageFile Include="$(AzureBlobStorageSelfContainedPublishPath)**"
+                              Exclude="$(AzureBlobStorageSelfContainedPublishPath)extension.json">
+        <PackagePath>$(_SelfContainedToolRoot)/extensions/$(AzureBlobStorageExtensionFolderName)</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="$(RepoRoot)src\Extensions\AzureBlobStorage\extension.selfcontained.json">
+        <PackagePath>$(_SelfContainedToolRoot)/extensions/$(AzureBlobStorageExtensionFolderName)/extension.json</PackagePath>
+      </TfmSpecificPackageFile>
+
+      <TfmSpecificPackageFile Include="$(S3StorageSelfContainedPublishPath)**"
+                              Exclude="$(S3StorageSelfContainedPublishPath)extension.json">
+        <PackagePath>$(_SelfContainedToolRoot)/extensions/$(S3StorageExtensionFolderName)</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="$(RepoRoot)src\Extensions\S3Storage\extension.selfcontained.json">
+        <PackagePath>$(_SelfContainedToolRoot)/extensions/$(S3StorageExtensionFolderName)/extension.json</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Fail the per-RID inner build if the matching-RID native profilers are missing, instead of silently
+    shipping a self-contained package without a working profiler (the content collector above filters with
+    ->Exists(), so a missing profiler would otherwise be dropped without a trace). Enabled in CI via
+    ValidateSelfContainedToolPackages; off by default for local dev packs that have no native build.
+  -->
+  <Target Name="_ValidateSelfContainedToolProfilersPresent"
+          Condition="'$(DotNetMonitorBuildSelfContainedTool)' == 'true' and '$(RuntimeIdentifier)' != '' and '$(ValidateSelfContainedToolPackages)' == 'true'"
+          BeforeTargets="CollectSelfContainedToolPackageFiles">
+    <ItemGroup>
+      <_RequiredSelfContainedProfiler Include="@(MonitorProfilerLibraryFile)" Condition="'%(TargetRid)' == '$(RuntimeIdentifier)'" />
+      <_RequiredSelfContainedProfiler Include="@(MutatingMonitorProfilerLibraryFile)" Condition="'%(TargetRid)' == '$(RuntimeIdentifier)'" />
+    </ItemGroup>
+    <Error Condition="'@(_RequiredSelfContainedProfiler)' == ''"
+           Text="No native profiler libraries are defined for RID '$(RuntimeIdentifier)'. The dotnet-monitor-selfcontained package cannot be built for this RID." />
+    <Error Condition="!Exists('%(_RequiredSelfContainedProfiler.Identity)')"
+           Text="Self-contained tool profiler '%(_RequiredSelfContainedProfiler.Identity)' for RID '$(RuntimeIdentifier)' was not found. The dotnet-monitor-selfcontained package would ship without a working profiler. Ensure the native build outputs for '$(RuntimeIdentifier)' are present under '$(ArtifactsBinDir)$(RuntimeIdentifier).$(Configuration)' before packing." />
+  </Target>
+
+  <!--
+    After the outer (wrapper) pack completes, assert that the only packages produced under this toggle are the
+    self-contained packages. This protects against a future change re-enabling IsPackable on the
+    framework-dependent dotnet-monitor / WebApi / Extension.Common projects under the toggle, which would
+    collide with the framework-dependent pack job. Runs once (outer build, RuntimeIdentifier == '').
+  -->
+  <Target Name="_ValidateSelfContainedToolPackages"
+          Condition="'$(DotNetMonitorBuildSelfContainedTool)' == 'true' and '$(RuntimeIdentifier)' == '' and '$(ValidateSelfContainedToolPackages)' == 'true'"
+          AfterTargets="Pack">
+    <ItemGroup>
+      <_ShippingPackage Include="$(ArtifactsPackagesDir)Shipping\*.nupkg" />
+      <_ForbiddenShippingPackage Include="@(_ShippingPackage)"
+                                 Condition="!$([System.String]::Copy('%(Filename)').StartsWith('dotnet-monitor-selfcontained'))" />
+    </ItemGroup>
+    <Error Condition="'@(_ShippingPackage)' == ''"
+           Text="The self-contained tool pack produced no shipping packages under '$(ArtifactsPackagesDir)Shipping'." />
+    <Error Condition="'@(_ForbiddenShippingPackage)' != ''"
+           Text="Unexpected package(s) produced under the DotNetMonitorBuildSelfContainedTool toggle: @(_ForbiddenShippingPackage->'%(Filename)%(Extension)', ', '). Only dotnet-monitor-selfcontained* packages are expected; the framework-dependent dotnet-monitor / WebApi / Extension.Common packages must not be re-emitted by the self-contained pack." />
+  </Target>
+
+</Project>
